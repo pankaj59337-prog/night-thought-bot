@@ -193,8 +193,8 @@ async def setup_bot() -> Application:
     if app.job_queue:
         app.job_queue.run_repeating(periodic_cleanup_job, interval=3600, first=60)
         logger.info("Scheduled retention cleanup job (interval: 1 hour)")
-        app.job_queue.run_repeating(render_keep_alive_job, interval=480, first=30)
-        logger.info("Registered 24/7 Keep-Alive ping job (interval: 8 mins)")
+        app.job_queue.run_repeating(render_keep_alive_job, interval=180, first=30)
+        logger.info("Registered 24/7 Keep-Alive ping job (interval: 3 mins)")
         register_autopilot_jobs(app)
 
     return app
@@ -278,11 +278,11 @@ def start_health_server() -> None:
                     urllib.request.urlopen(req, timeout=20)
                 except Exception:
                     pass
-                time.sleep(480)
+                time.sleep(180)
 
         pinger_thread = threading.Thread(target=_daemon_pinger, daemon=True)
         pinger_thread.start()
-        logger.info("Keep-alive daemon thread started (pings every 8 minutes)")
+        logger.info("Keep-alive daemon thread started (pings every 3 minutes)")
     except Exception as e:
         logger.warning(f"Could not start healthcheck server on port {port}: {e}")
 

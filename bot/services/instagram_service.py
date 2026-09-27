@@ -207,7 +207,26 @@ class InstagramService:
                 "account_id": graph_creds.get("account_id"),
                 "type": "meta_graph_api",
             }
-        return await db_manager.get_instagram_account(chat_id)
+        acc = await db_manager.get_instagram_account(chat_id)
+        if acc:
+            return acc
+
+        # Auto-recover from existing session file on disk (resilient across DB resets / cloud redeploys)
+        session_path = self._get_session_path(chat_id)
+        if session_path.exists():
+            try:
+                username = "night_thought_12"
+                await db_manager.save_instagram_account(
+                    chat_id=chat_id,
+                    username=username,
+                    session_file=str(session_path),
+                    auto_post=1
+                )
+                logger.info(f"[InstagramService] Auto-recovered active session for @{username} (chat {chat_id})")
+                return await db_manager.get_instagram_account(chat_id)
+            except Exception as e:
+                logger.warning(f"[InstagramService] Failed to auto-recover session: {e}")
+        return None
 
     async def set_autopost(self, chat_id: int, enabled: bool) -> bool:
         """Enable or disable automatic posting on reel creation."""
