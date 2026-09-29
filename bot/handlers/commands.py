@@ -141,7 +141,7 @@ async def sync_music_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     status_msg = None
     if update.effective_message:
         status_msg = await update.effective_message.reply_text(
-            "🔄 *Scanning your Instagram Saved & Liked Reels for trending audio...*\nPlease wait a moment.",
+            "🔄 *Scanning your Instagram Saved Audio (Saved -> Audio)...*\nPlease wait a moment.",
             parse_mode="Markdown",
         )
 
@@ -152,7 +152,7 @@ async def sync_music_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         synced = await audio_sync_service.sync_from_instagram(chat_id)
 
         if synced:
-            lines = [f"🎵 *Synced {len(synced)} New Trending Song(s) from Instagram!*\n"]
+            lines = [f"🎵 *Synced {len(synced)} New Trending Song(s) from Saved Audio!*\n"]
             for s in synced:
                 lines.append(f"• *{s['title']}* — _{s['artist']}_")
             lines.append(f"\n🎧 *Total Active Playlist Size:* {len(VOCAL_TRACKS)} tracks")
@@ -162,8 +162,8 @@ async def sync_music_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
             text = (
                 f"✅ *Audio Library is Up to Date!*\n\n"
                 f"• Active Tracks in Playlist: *{len(VOCAL_TRACKS)}*\n"
-                f"• No new unsynced saved/liked reels found.\n\n"
-                f"💡 _Tip: Like (❤️) or Save (🔖) any reel on Instagram while scrolling, then run /sync_music!_"
+                f"• No new unsynced audio found in Saved -> Audio.\n\n"
+                f"💡 _Tip: Instagram par kisi reel ka sound 'Save Audio' karo, fir /sync_music chalao!_"
             )
 
         if status_msg:
