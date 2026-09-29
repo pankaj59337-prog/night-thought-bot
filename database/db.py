@@ -46,6 +46,18 @@ CREATE TABLE IF NOT EXISTS bot_settings (
     key TEXT PRIMARY KEY,
     value TEXT
 );
+
+CREATE TABLE IF NOT EXISTS synced_instagram_audio (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    audio_id TEXT UNIQUE NOT NULL,
+    title TEXT NOT NULL,
+    artist TEXT,
+    file_path TEXT NOT NULL,
+    media_pk TEXT,
+    source TEXT DEFAULT 'instagram',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_synced_audio ON synced_instagram_audio(audio_id);
 """
 
 
@@ -283,6 +295,56 @@ class DatabaseManager:
                 (key, value, value),
             )
             await db.commit()
+
+    async def record_synced_audio(
+        self,
+        audio_id: str,
+        title: str,
+        artist: str,
+        file_path: str,
+        media_pk: Optional[str] = None,
+        source: str = "instagram",
+    ) -> None:
+        """Store newly extracted audio track from Instagram saved/liked reels."""
+        async with aiosqlite.connect(self.db_path) as db:
+            await db.execute(
+                """
+                INSERT OR IGNORE INTO synced_instagram_audio
+                (audio_id, title, artist, file_path, media_pk, source)
+                VALUES (?, ?, ?, ?, ?, ?);
+                """,
+                (audio_id, title, artist, file_path, media_pk, source),
+            )
+            await db.commit()
+
+    async def get_all_synced_audio(self) -> List[Dict[str, Any]]:
+        """Retrieve all synced audio records."""
+        async with aiosqlite.connect(self.db_path) as db:
+            async with db.execute(
+                "SELECT audio_id, title, artist, file_path, media_pk, source FROM synced_instagram_audio ORDER BY id ASC;"
+            ) as cursor:
+                rows = await cursor.fetchall()
+                return [
+                    {
+                        "audio_id": r[0],
+                        "title": r[1],
+                        "artist": r[2] or "Instagram Sound",
+                        "file_path": r[3],
+                        "media_pk": r[4],
+                        "source": r[5],
+                    }
+                    for r in rows
+                ]
+
+    async def is_audio_already_synced(self, audio_id: str) -> bool:
+        """Check if an audio ID or media PK has already been downloaded."""
+        async with aiosqlite.connect(self.db_path) as db:
+            async with db.execute(
+                "SELECT 1 FROM synced_instagram_audio WHERE audio_id = ? OR media_pk = ? LIMIT 1;",
+                (audio_id, audio_id),
+            ) as cursor:
+                row = await cursor.fetchone()
+                return row is not None
 
 
 # Singleton instance

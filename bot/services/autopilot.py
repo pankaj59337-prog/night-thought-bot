@@ -22,7 +22,7 @@ from telegram.ext import Application, ContextTypes
 
 from bot.handlers.commands import restricted
 from bot.services.instagram_service import instagram_service
-from bot.services.music_service import music_service
+from bot.services.music_service import VOCAL_TRACKS, music_service
 from bot.services.render_service import execute_render_job
 from bot.utils.config import config
 from database.db import db_manager
@@ -35,12 +35,114 @@ DEFAULT_ADMIN_CHAT_ID = 5381201341
 # Store pending auto-post tasks: post_id -> {chat_id, video_path, caption, target_time, status}
 PENDING_AUTO_POSTS: Dict[str, Dict[str, Any]] = {}
 
-# 4 Optimal Daily Viral Slots (Spaced 3-5 hours apart for max algorithm push)
+# Targeted high-converting aesthetic hashtags per category (Zero generic spam)
+CATEGORY_HASHTAGS: Dict[str, List[str]] = {
+    "romantic": [
+        "#nightthoughts", "#ishqshayari", "#aestheticreels", "#mohabbat",
+        "#latenightthoughts", "#relatablequotes", "#hindiquotes", "#twolineshayari",
+    ],
+    "sexy": [
+        "#nightthoughts", "#boldandbeautiful", "#reelsindia", "#desioutfit",
+        "#aestheticvibes", "#exploreindia", "#instamood", "#sensualquotes",
+    ],
+    "baddie": [
+        "#selflove", "#baddievibes", "#unbothered", "#desiaesthetic",
+        "#confidencequotes", "#reelsindia", "#bossbabe", "#attitude",
+    ],
+    "broken": [
+        "#dardshayari", "#brokenheartquotes", "#nightthoughts", "#alfaaz",
+        "#relatablefeelings", "#heartbroken", "#sadreels", "#latenightvibes",
+    ],
+    "cinematic": [
+        "#cinematicreels", "#nightthoughts", "#visualpoetry", "#aestheticedits",
+        "#moodygrams", "#retroaesthetic", "#indianfilmmaker", "#delhigram",
+    ],
+    "traditional": [
+        "#desiaesthetic", "#ethnicwear", "#sareelove", "#jhumkalove",
+        "#indianculture", "#traditionallook", "#kurtilove", "#aestheticindia",
+    ],
+    "bestie": [
+        "#bestiegoals", "#dosti", "#yaari", "#friendshipgoals",
+        "#relatablebestie", "#bffvibes", "#friendshipshayari", "#memories",
+    ],
+    "aesthetic": [
+        "#aestheticvideos", "#peaceofmind", "#softlife", "#calmvibes",
+        "#natureaesthetic", "#slowliving", "#chaiandsupper", "#healingjourney",
+    ],
+}
+
+# Micro-CTAs driving 2026 algorithmic signals (Saves, Shares & Comments)
+CATEGORY_CTAS: Dict[str, List[str]] = {
+    "romantic": [
+        "Save this for your 2 AM thoughts 🌙",
+        "Send this to that one person who owns your heart 💭❤️",
+        "Tag someone who makes you feel this way 🤍",
+        "Drop a '❤️' if you felt every word.",
+    ],
+    "sexy": [
+        "Save this for the late night mood 🔥✨",
+        "Send this to someone who can't handle your vibe 💋",
+        "Double tap if confidence looks good on you 💅",
+        "Drop a '🔥' in the comments if you agree.",
+    ],
+    "baddie": [
+        "Save this reminder whenever you doubt your worth 👑💅",
+        "Send this to your unbothered bestie 💅✨",
+        "Never lower your standards for anyone. Period. 🖤",
+        "Drop a '💎' if you are your own favorite.",
+    ],
+    "broken": [
+        "Save this if you're quietly healing 🥀🖤",
+        "Send this to someone whose silence speaks volumes 🕊️",
+        "Drop a '🥀' if you've been carrying this alone...",
+        "Some goodbyes are never spoken, they just hurt in silence.",
+    ],
+    "cinematic": [
+        "Save this for midnight reflections 🌙🎥",
+        "Put your headphones on and let the scene breathe 🎧✨",
+        "Send this to someone who loves quiet cinematic moments 🖤",
+        "Drop a '🌌' if this felt like a movie scene.",
+    ],
+    "traditional": [
+        "Save this timeless desi elegance 🥻🪔",
+        "Nothing beats authentic Indian grace and a quiet smile 🤍✨",
+        "Tag a girl who looks ethereal in traditional wear 🌸👑",
+        "Drop a '🪔' if you love classic desi aesthetic.",
+    ],
+    "bestie": [
+        "Send this to your partner in crime right now 👯‍♀️✨",
+        "Tag that one friend who knows all your secrets 💬🤍",
+        "Save this for your next hangout memory ☕🌸",
+        "Drop a '🤍' for your forever person.",
+    ],
+    "aesthetic": [
+        "Save this to reset your peace today 🕊️🌿",
+        "Take a deep breath. You are exactly where you need to be ✨",
+        "Send this peaceful reminder to someone having a long day ☕🤍",
+        "Drop a '🌿' if you choose calm over chaos.",
+    ],
+}
+
+
+def generate_viral_ig_caption(category: str, hook_text: str) -> str:
+    """Generate high-converting caption with micro-CTA and targeted niche tags."""
+    cat = category.lower().strip() if category else "romantic"
+    ctas = CATEGORY_CTAS.get(cat, CATEGORY_CTAS["romantic"])
+    tags = CATEGORY_HASHTAGS.get(cat, CATEGORY_HASHTAGS["romantic"])
+
+    cta = random.choice(ctas)
+    tag_str = " ".join(tags)
+
+    return f"{hook_text}\n.\n{cta}\n.\n{tag_str}"
+
+
+# 2 High-Impact Daily Viral Slots (Spaced to maximize reach and avoid shadowban)
 DAILY_SLOTS = [
     {
         "name": "slot_afternoon_lunch",
+        "categories": ["romantic", "traditional", "aesthetic", "bestie"],
         "category": "romantic",
-        "title": "Romantic Love / Desi Vibe",
+        "title": "Daytime Aesthetic & Desi Romance",
         "icon": "💖",
         "delivery_time_str": "01:20 PM IST",
         "target_post_time_str": "01:30 PM IST",
@@ -48,33 +150,14 @@ DAILY_SLOTS = [
         "minute": 20,
     },
     {
-        "name": "slot_evening_unwind",
-        "category": "traditional",
-        "title": "Desi Traditional / Aesthetic",
-        "icon": "👑",
-        "delivery_time_str": "06:20 PM IST",
-        "target_post_time_str": "06:30 PM IST",
-        "hour": 18,
-        "minute": 20,
-    },
-    {
         "name": "slot_prime_night",
+        "categories": ["cinematic", "sexy", "broken", "baddie"],
         "category": "sexy",
-        "title": "Hot & Baddie / Flirty Desi",
-        "icon": "🔥",
+        "title": "Prime Night / Flirty & Cinematic",
+        "icon": "🌙",
         "delivery_time_str": "09:20 PM IST",
         "target_post_time_str": "09:30 PM IST",
         "hour": 21,
-        "minute": 20,
-    },
-    {
-        "name": "slot_late_night_thoughts",
-        "category": "cinematic",
-        "title": "Late Night / Dark Thoughts",
-        "icon": "🌙",
-        "delivery_time_str": "11:20 PM IST",
-        "target_post_time_str": "11:30 PM IST",
-        "hour": 23,
         "minute": 20,
     },
 ]
@@ -133,9 +216,9 @@ async def get_active_subscribers() -> List[int]:
             return subs
 
 
-def get_pure_vocal_lyrics_track(category: str) -> Dict[str, Any]:
-    """Pick ONLY pure vocal lyrics tracks (NO BGM, NO instrumental)."""
-    vocal_options = music_service.get_vocal_options(category=category, limit=10)
+def get_pure_vocal_lyrics_track(category: str, exclude_ids: Optional[set] = None) -> Dict[str, Any]:
+    """Pick ONLY pure vocal lyrics tracks (NO BGM, NO instrumental) excluding already used IDs."""
+    vocal_options = music_service.get_vocal_options(category=category, exclude_ids=exclude_ids, limit=10)
     # Strictly filter for vocal lyrical files
     lyrics_only = [t for t in vocal_options if t.get("lyrics") and t["file"].endswith("_vocal.mp3")]
     if not lyrics_only:
@@ -144,6 +227,7 @@ def get_pure_vocal_lyrics_track(category: str) -> Dict[str, Any]:
     if lyrics_only:
         chosen = random.choice(lyrics_only)
         return {
+            "id": chosen.get("id", ""),
             "path": chosen["path"],
             "title": chosen["title"],
             "artist": chosen.get("artist", "Bollywood Vocal"),
@@ -151,6 +235,7 @@ def get_pure_vocal_lyrics_track(category: str) -> Dict[str, Any]:
         }
     fallback_p = music_service.get_bollywood_track(category)
     return {
+        "id": "fallback",
         "path": fallback_p,
         "title": music_service.get_track_title(fallback_p),
         "artist": "Bollywood Vocal",
@@ -237,16 +322,43 @@ async def generate_and_deliver_scheduled_reel(
     from bot.handlers.auto import get_random_category_image, get_category_info, ALL_HOOK_OPTIONS
 
     cat_info = get_category_info(category)
-    image_path = get_random_category_image(category, chat_id)
 
-    # Pick matching hook
+    # 1. Fetch used assets history from database
+    used_images = await db_manager.get_used_assets(chat_id, "image")
+    used_quotes = await db_manager.get_used_assets(chat_id, "text")
+    used_music = await db_manager.get_used_assets(chat_id, "music")
+
+    # 2. Pick unused image from category pool
+    image_path = get_random_category_image(category, chat_id, used_names_override=used_images)
+
+    # 3. Pick matching hook without repeating
     cat_hooks = [h["text"] for h in ALL_HOOK_OPTIONS if category in h.get("categories", [])]
     if not cat_hooks:
         cat_hooks = [h["text"] for h in ALL_HOOK_OPTIONS]
-    hook_text = random.choice(cat_hooks)
 
-    # STRICT: Pure vocal lyrics audio (NO BGM, NO Instrumental)
-    track_info = get_pure_vocal_lyrics_track(category)
+    unused_hooks = [t for t in cat_hooks if t not in used_quotes]
+    if not unused_hooks:
+        logger.info(f"[AutoPilot] All {len(cat_hooks)} hooks used for '{category}'. Clearing used quote history.")
+        await db_manager.clear_used_assets(chat_id, "text")
+        unused_hooks = cat_hooks
+    hook_text = random.choice(unused_hooks)
+
+    # 3.5 Auto-sync newly saved/liked trending reels from Instagram
+    try:
+        from bot.services.audio_sync_service import audio_sync_service
+        new_synced = await audio_sync_service.sync_from_instagram(chat_id)
+        if new_synced:
+            logger.info(f"[AutoPilot] Pre-generation sync added {len(new_synced)} new trending song(s) from Instagram!")
+    except Exception as e:
+        logger.warning(f"[AutoPilot] Pre-generation Instagram audio sync skipped: {e}")
+
+    # 4. Pick pure vocal lyrics audio without repeating
+    if len(used_music) >= max(1, len(VOCAL_TRACKS) - 2):
+        logger.info(f"[AutoPilot] Vocal audio pool cycled ({len(used_music)} tracks used). Resetting music history.")
+        await db_manager.clear_used_assets(chat_id, "music")
+        used_music = set()
+
+    track_info = get_pure_vocal_lyrics_track(category, exclude_ids=used_music)
     vocal_path = track_info["path"]
     song_title = f"{track_info['title']} - {track_info['artist']}"
 
@@ -283,15 +395,19 @@ async def generate_and_deliver_scheduled_reel(
             except Exception as e:
                 logger.warning(f"[AutoPilot] Could not move image: {e}")
 
-            await db_manager.record_used_asset(chat_id, "image", image_path.name)
-            await db_manager.record_used_asset(chat_id, "text", hook_text)
             status_tag = "*(Moved to Used Folder ✅)*"
         else:
             logger.info(f"[AutoPilot] Testing mode: kept {image_path.name} in category pool without moving to used")
             status_tag = "*(Testing Mode — Kept in Pool 🔄)*"
 
-        hashtags = "#reels #trending #viral #fyp #explore #explorepage #instareels #aesthetic"
-        ig_caption = f"{hook_text}\n\n{hashtags}"
+        # Record used assets in DB so neither image, quote, nor song repeats
+        await db_manager.record_used_asset(chat_id, "image", image_path.name)
+        await db_manager.record_used_asset(chat_id, "text", hook_text)
+        if track_info.get("id"):
+            await db_manager.record_used_asset(chat_id, "music", track_info["id"])
+
+        # High-retention viral caption with micro-CTA & niche tags
+        ig_caption = generate_viral_ig_caption(category, hook_text)
 
         post_id = f"ap_{chat_id}_{timestamp}"
         PENDING_AUTO_POSTS[post_id] = {
@@ -375,12 +491,18 @@ async def generate_and_deliver_scheduled_reel(
 async def execute_autopilot_slot_job(context: ContextTypes.DEFAULT_TYPE) -> None:
     """Job callback triggered by APScheduler / JobQueue at scheduled delivery times."""
     job_data = context.job.data or {}
-    category = job_data.get("category", "romantic")
+    category_pool = job_data.get("categories", [job_data.get("category", "romantic")])
     target_time_str = job_data.get("target_post_time_str", "08:00 PM IST")
     delivery_time_str = job_data.get("delivery_time_str", "07:50 PM IST")
 
+    # Rotate category smoothly across the pool, avoiding immediate repetition
+    last_cat = await db_manager.get_setting("last_autopilot_category", "")
+    eligible = [c for c in category_pool if c != last_cat] or category_pool
+    category = random.choice(eligible)
+    await db_manager.set_setting("last_autopilot_category", category)
+
     subscribers = await get_active_subscribers()
-    logger.info(f"[AutoPilot] Running slot {category} for {len(subscribers)} subscriber(s)")
+    logger.info(f"[AutoPilot] Running slot with category '{category}' for {len(subscribers)} subscriber(s)")
 
     for chat_id in subscribers:
         try:
@@ -428,13 +550,11 @@ async def autopilot_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         if subcmd in ("on", "start", "enable", "1"):
             await set_autopilot_status(chat_id, True)
             await update.effective_message.reply_text(
-                "✅ *AutoPilot Mode Activated (4 High-Impact Slots)!*\n\n"
+                "✅ *AutoPilot Mode Activated (2 High-Impact Slots)!*\n\n"
                 "The bot will automatically deliver ready reels 10 minutes before peak slots:\n\n"
-                "1️⃣ 💖 *01:20 PM IST:* Romantic Love / Desi (Post: 01:30 PM)\n"
-                "2️⃣ 👑 *06:20 PM IST:* Desi Traditional / Aesthetic (Post: 06:30 PM)\n"
-                "3️⃣ 🔥 *09:20 PM IST:* Hot & Baddie / Flirty Desi (Post: 09:30 PM)\n"
-                "4️⃣ 🌙 *11:20 PM IST:* Late Night / Dark Thoughts (Post: 11:30 PM)\n\n"
-                "_(💡 Spaced 3-5 hours apart to maximize Explore reach. If not cancelled within 10 minutes, the bot will auto-publish to Instagram!)_",
+                "1️⃣ 💖 *01:20 PM IST:* Daytime Aesthetic / Desi Romance (Post: 01:30 PM)\n"
+                "2️⃣ 🌙 *09:20 PM IST:* Prime Night / Flirty & Cinematic (Post: 09:30 PM)\n\n"
+                "_(💡 Spaced 8 hours apart to maximize Explore reach & watch time. If not cancelled within 10 minutes, the bot will auto-publish to Instagram!)_",
                 parse_mode="Markdown",
             )
             return
@@ -470,17 +590,16 @@ async def autopilot_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     current_time_str = now_ist.strftime("%I:%M %p")
 
     msg = (
-        f"🤖 *AutoPilot 4-Slot Peak Viral Schedule*\n\n"
+        f"🤖 *AutoPilot 2-Slot Peak Viral Schedule*\n\n"
         f"• Status: *{status_icon}*\n"
         f"• Current Time: *{current_time_str} IST*\n"
-        f"• Spacing: ⏱️ *3-5 Hours Gap (Prevents Spam Shadowban)*\n"
-        f"• Audio Policy: 🎵 *Pure Vocal Lyrics Only*\n"
+        f"• Spacing: ⏱️ *8 Hours Gap (Maximizes Watch Time & Reach)*\n"
+        f"• Audio Policy: 🎵 *Pure Vocal Lyrics Only (Zero Repetition)*\n"
+        f"• Deduplication: 🛡️ *Strict DB Tracking for Quotes, Audio & Photos*\n"
         f"• Fallback: ⏳ *10 Min Inactive -> Auto-Post to Instagram*\n\n"
-        "📅 *Full Daily 4-Slot Peak Timetable:*\n"
-        "1️⃣ 💖 *Romantic / Desi:* 01:20 PM (Post: 01:30 PM)\n"
-        "2️⃣ 👑 *Desi Traditional:* 06:20 PM (Post: 06:30 PM)\n"
-        "3️⃣ 🔥 *Hot & Baddie / Flirty:* 09:20 PM (Post: 09:30 PM)\n"
-        "4️⃣ 🌙 *Late Night Thoughts:* 11:20 PM (Post: 11:30 PM)"
+        "📅 *Daily 2-Slot Peak Timetable:*\n"
+        "1️⃣ 💖 *Daytime Aesthetic / Romance:* 01:20 PM (Post: 01:30 PM)\n"
+        "2️⃣ 🌙 *Prime Night / Cinematic:* 09:20 PM (Post: 09:30 PM)"
     )
 
     toggle_btn = (
@@ -607,8 +726,8 @@ async def handle_autopilot_callbacks(update: Update, context: ContextTypes.DEFAU
     elif data == "autopilot_toggle_on":
         await set_autopilot_status(chat_id, True)
         await query.edit_message_text(
-            "✅ *AutoPilot Mode Activated!*\n\n"
-            "Daily reels will be delivered at 12:20 PM, 7:50 PM, and 10:35 PM IST with a 10-minute auto-post fallback! 🚀",
+            "✅ *AutoPilot Mode Activated (2 Peak Slots)!*\n\n"
+            "Daily reels will be delivered at 01:20 PM and 09:20 PM IST with 10-minute advance alert & auto-post fallback! 🚀",
             parse_mode="Markdown",
         )
 
@@ -620,14 +739,16 @@ async def handle_autopilot_callbacks(update: Update, context: ContextTypes.DEFAU
         )
 
     elif data == "autopilot_test_now":
+        categories = ["romantic", "sexy", "baddie", "broken", "cinematic", "traditional", "bestie", "aesthetic"]
+        test_cat = random.choice(categories)
         await query.edit_message_text(
-            "🧪 *Testing AutoPilot Reel Generation...*\nGenerating reel with 10-minute advance alert...",
+            f"🧪 *Testing AutoPilot Reel Generation ({test_cat.title()})...*\nGenerating reel with 10-minute advance alert...",
             parse_mode="Markdown",
         )
         await generate_and_deliver_scheduled_reel(
             bot=context.bot,
             chat_id=chat_id,
-            category="romantic",
+            category=test_cat,
             target_time_str="08:00 PM IST",
             delivery_time_str="07:50 PM IST",
             job_queue=context.job_queue,

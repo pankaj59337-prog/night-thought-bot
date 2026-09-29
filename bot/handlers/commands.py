@@ -129,3 +129,48 @@ async def cancel_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     if update.effective_message:
         await update.effective_message.reply_text("🛑 Current reel creation cancelled. Type /reel to start fresh!")
+
+
+@restricted
+async def sync_music_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /sync_music command to pull saved & liked reels audio from Instagram into playlist."""
+    chat_id = update.effective_chat.id
+    status_msg = None
+    if update.effective_message:
+        status_msg = await update.effective_message.reply_text(
+            "🔄 *Scanning your Instagram Saved & Liked Reels for trending audio...*\nPlease wait a moment.",
+            parse_mode="Markdown",
+        )
+
+    try:
+        from bot.services.audio_sync_service import audio_sync_service
+        from bot.services.music_service import VOCAL_TRACKS
+
+        synced = await audio_sync_service.sync_from_instagram(chat_id)
+
+        if synced:
+            lines = [f"🎵 *Synced {len(synced)} New Trending Song(s) from Instagram!*\n"]
+            for s in synced:
+                lines.append(f"• *{s['title']}* — _{s['artist']}_")
+            lines.append(f"\n🎧 *Total Active Playlist Size:* {len(VOCAL_TRACKS)} tracks")
+            lines.append("⚡ _These sounds will now be automatically featured in your upcoming scheduled reels!_")
+            text = "\n".join(lines)
+        else:
+            text = (
+                f"✅ *Audio Library is Up to Date!*\n\n"
+                f"• Active Tracks in Playlist: *{len(VOCAL_TRACKS)}*\n"
+                f"• No new unsynced saved/liked reels found.\n\n"
+                f"💡 _Tip: Like (❤️) or Save (🔖) any reel on Instagram while scrolling, then run /sync_music!_"
+            )
+
+        if status_msg:
+            await status_msg.edit_text(text, parse_mode="Markdown")
+        elif update.effective_message:
+            await update.effective_message.reply_text(text, parse_mode="Markdown")
+
+    except Exception as e:
+        err_text = f"⚠️ *Error syncing Instagram music:*\n{e}"
+        if status_msg:
+            await status_msg.edit_text(err_text, parse_mode="Markdown")
+        elif update.effective_message:
+            await update.effective_message.reply_text(err_text, parse_mode="Markdown")

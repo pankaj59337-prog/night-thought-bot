@@ -154,6 +154,24 @@ VOCAL_TRACKS: List[Dict[str, Any]] = [
         "icon": "💌",
         "style_affinity": ["sexy", "romantic", "cinematic"],
     },
+    {
+        "id": "dil_de_diya_hai",
+        "file": "dil_de_diya_hai_vocal.mp3",
+        "title": "Dil De Diya Hai",
+        "artist": "Anand Raj Anand",
+        "lyrics": "Dil de diya hai, jaan tumhe denge...",
+        "icon": "💔",
+        "style_affinity": ["romantic", "broken", "cinematic", "traditional", "quote"],
+    },
+    {
+        "id": "lut_gaye",
+        "file": "lut_gaye_jubin_nautiyal_vocal.mp3",
+        "title": "Lut Gaye",
+        "artist": "Jubin Nautiyal",
+        "lyrics": "Aankh uthi mohabbat ne angrai li, dil ka sauda hua chandi raat mein...",
+        "icon": "🥀",
+        "style_affinity": ["romantic", "broken", "cinematic", "sexy", "quote"],
+    },
 ]
 
 TRACK_METADATA: Dict[str, Dict[str, Any]] = {

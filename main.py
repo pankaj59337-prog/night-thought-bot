@@ -20,6 +20,7 @@ from bot.handlers.commands import (
     help_command,
     start_command,
     status_command,
+    sync_music_command,
     templates_command,
 )
 from bot.handlers.media import (
@@ -137,6 +138,13 @@ async def setup_bot() -> Application:
     # Initialize SQLite database
     await db_manager.init_db()
 
+    # Load previously synced Instagram songs into playlist
+    try:
+        from bot.services.audio_sync_service import audio_sync_service
+        await audio_sync_service.load_synced_tracks_into_playlist()
+    except Exception as e:
+        logger.warning(f"Could not load synced tracks at startup: {e}")
+
     # Configure robust connection and upload timeouts for video reels
     request_config = HTTPXRequest(
         connection_pool_size=16,
@@ -160,6 +168,7 @@ async def setup_bot() -> Application:
     app.add_handler(CommandHandler("reset_history", reset_history_command))
     app.add_handler(CommandHandler("set_gemini_key", set_gemini_key_command))
     app.add_handler(CommandHandler("set_openai_key", set_openai_key_command))
+    app.add_handler(CommandHandler(["sync_music", "sync_audio", "sync_songs"], sync_music_command))
 
     # Register Media & Content Handlers
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))

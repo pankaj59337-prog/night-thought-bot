@@ -153,11 +153,11 @@ class InstagramService:
 
     async def get_authenticated_client(self, chat_id: int) -> Optional[Client]:
         """Retrieve instagrapi Client with active session."""
+        session_path = self._get_session_path(chat_id)
         acc = await db_manager.get_instagram_account(chat_id)
-        if not acc:
-            return None
+        if acc:
+            session_path = Path(acc["session_file"])
 
-        session_path = Path(acc["session_file"])
         if not session_path.exists():
             return None
 
@@ -168,6 +168,9 @@ class InstagramService:
         except Exception as e:
             logger.warning(f"Could not load Instagram session for {chat_id}: {e}")
             return None
+
+    # Alias for convenience
+    get_client = get_authenticated_client
 
     async def get_graph_credentials(self, chat_id: int) -> Optional[Dict[str, str]]:
         """Check for official Graph API account ID and access token."""
