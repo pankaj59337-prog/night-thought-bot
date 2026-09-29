@@ -315,21 +315,47 @@ def start_health_server() -> None:
         logger.warning(f"Could not start healthcheck server on port {port}: {e}")
 
 
+async def main_async() -> None:
+    """Async main routine running in a single consistent event loop."""
+    app = await setup_bot()
+    await app.initialize()
+    await app.start()
+    if app.updater:
+        for attempt in range(12):
+            try:
+                await app.updater.start_polling(drop_pending_updates=True, bootstrap_retries=5)
+                break
+            except Exception as e:
+                if "Conflict" in str(e) or "terminated by other getUpdates" in str(e):
+                    logger.warning(f"[Deploy] Telegram conflict (old instance shutting down). Retrying in 5s (attempt {attempt+1}/12)...")
+                    await asyncio.sleep(5)
+                else:
+                    raise
+    logger.info("🚀 Night Thought Reel Bot is running and polling for updates...")
+
+    try:
+        while True:
+            await asyncio.sleep(3600)
+    finally:
+        if app.updater and app.updater.running:
+            await app.updater.stop()
+        if app.running:
+            await app.stop()
+        await app.shutdown()
+
+
 def main() -> None:
     """Run bot polling."""
     try:
         start_health_server()
-        # Run setup asynchronously
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        app = loop.run_until_complete(setup_bot())
-
-        logger.info("🚀 Telegram Reel Maker Bot is running and polling for updates...")
-        app.run_polling(drop_pending_updates=True, bootstrap_retries=10)
+        asyncio.run(main_async())
+    except (KeyboardInterrupt, SystemExit):
+        pass
     except Exception as e:
         with open("crash.log", "a", encoding="utf-8") as f:
             f.write(f"\n[FATAL MAIN EXCEPTION]: {traceback.format_exc()}\n")
         logger.error(f"Fatal error in main: {e}", exc_info=True)
+
 
 
 
