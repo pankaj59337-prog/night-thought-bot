@@ -29,7 +29,11 @@ from database.db import db_manager
 
 logger = logging.getLogger(__name__)
 
-IST = ZoneInfo("Asia/Kolkata")
+try:
+    IST = ZoneInfo("Asia/Kolkata")
+except Exception:
+    import datetime as _dt
+    IST = _dt.timezone(_dt.timedelta(hours=5, minutes=30), name="IST")
 DEFAULT_ADMIN_CHAT_ID = 5381201341
 
 # Store pending auto-post tasks: post_id -> {chat_id, video_path, caption, target_time, status}

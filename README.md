@@ -1,6 +1,6 @@
-# 🎬 Telegram Reel Maker Bot
+# 🌙 Night Thought Reel Maker Bot (`@night_thought_12`)
 
-An autonomous, self-hosted Telegram bot that creates vertical **9:16 Instagram Reels (1080x1920 MP4, H.264, AAC)** from photos or videos, with styled text overlays across 5 customizable templates, Ken Burns motion, and intelligent background audio ducking.
+Dedicated 24/7 autonomous Instagram Reel Studio & AutoPilot Engine for **`@night_thought_12`**. Generates vertical **9:16 Instagram Reels (1080x1920 MP4)** across 8 curated aesthetic categories (Romantic, Sexy/Flirty, Baddie, Cinematic, Broken, Traditional, Bestie, Aesthetic) with synchronized Bollywood vocal tracks and scheduled auto-posting.
 
 ---
 
