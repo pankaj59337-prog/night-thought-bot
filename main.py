@@ -107,6 +107,11 @@ async def periodic_cleanup_job(context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def global_error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Log uncaught exceptions to prevent bot from crashing."""
+    err_str = str(context.error) if context and context.error else ""
+    if "Conflict" in err_str or "terminated by other getUpdates" in err_str:
+        logger.warning(f"[Deploy] Handled transient Telegram conflict during container handoff: {err_str}")
+        return
+
     logger.error("Exception occurred while handling an update:", exc_info=context.error)
     if isinstance(update, Update) and update.effective_message:
         try:
