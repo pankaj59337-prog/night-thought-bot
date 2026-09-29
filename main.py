@@ -3,6 +3,14 @@
 import asyncio
 import logging
 import sys
+import traceback
+
+def handle_unhandled_exception(exc_type, exc_value, exc_tb):
+    with open("crash.log", "a", encoding="utf-8") as f:
+        f.write(f"\n--- CRASH AT {asyncio.get_event_loop() if hasattr(asyncio, 'get_event_loop') else ''} ---\n")
+        traceback.print_exception(exc_type, exc_value, exc_tb, file=f)
+sys.excepthook = handle_unhandled_exception
+
 from telegram import Update
 from telegram.request import HTTPXRequest
 from telegram.ext import (
@@ -69,22 +77,23 @@ from bot.utils.config import config, mask_token
 from bot.utils.ffmpeg_check import check_ffmpeg_installed, check_ffprobe_installed, get_ffmpeg_version
 from database.db import db_manager
 
-# Ensure UTF-8 output encoding across Windows and POSIX
-if hasattr(sys.stdout, "reconfigure"):
+# Ensure UTF-8 output encoding across Windows and POSIX (console & pythonw safe)
+log_handlers = [logging.FileHandler("bot.log", encoding="utf-8")]
+if sys.stdout is not None:
     try:
-        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+        if hasattr(sys.stdout, "reconfigure"):
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        if sys.stderr and hasattr(sys.stderr, "reconfigure"):
+            sys.stderr.reconfigure(encoding="utf-8", errors="replace")
     except Exception:
         pass
+    log_handlers.append(logging.StreamHandler(sys.stdout))
 
 # Configure logging
 logging.basicConfig(
     format="%(asctime)s - [%(levelname)s] - %(name)s: %(message)s",
     level=logging.INFO,
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-        logging.FileHandler("bot.log", encoding="utf-8"),
-    ],
+    handlers=log_handlers,
 )
 logger = logging.getLogger("reel_bot")
 
@@ -308,14 +317,20 @@ def start_health_server() -> None:
 
 def main() -> None:
     """Run bot polling."""
-    start_health_server()
-    # Run setup asynchronously
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    app = loop.run_until_complete(setup_bot())
+    try:
+        start_health_server()
+        # Run setup asynchronously
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        app = loop.run_until_complete(setup_bot())
 
-    logger.info("🚀 Telegram Reel Maker Bot is running and polling for updates...")
-    app.run_polling(drop_pending_updates=False)
+        logger.info("🚀 Telegram Reel Maker Bot is running and polling for updates...")
+        app.run_polling(drop_pending_updates=True, bootstrap_retries=10)
+    except Exception as e:
+        with open("crash.log", "a", encoding="utf-8") as f:
+            f.write(f"\n[FATAL MAIN EXCEPTION]: {traceback.format_exc()}\n")
+        logger.error(f"Fatal error in main: {e}", exc_info=True)
+
 
 
 if __name__ == "__main__":
