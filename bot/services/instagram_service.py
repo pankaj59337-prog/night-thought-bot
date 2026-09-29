@@ -45,6 +45,9 @@ class InstagramService:
     def _get_session_path(self, chat_id: int) -> Path:
         return self.session_dir / f"instagram_{chat_id}.json"
 
+    def _get_sync_session_path(self, chat_id: int) -> Path:
+        return self.session_dir / f"audio_sync_{chat_id}.json"
+
     def _create_client(self) -> Client:
         cl = Client()
         cl.delay_range = [1, 3]
@@ -150,6 +153,53 @@ class InstagramService:
             logger.info(f"Instagram user @{result['username']} connected via sessionid for chat {chat_id}")
         return result
 
+    async def login_sync_sessionid(
+        self,
+        chat_id: int,
+        sessionid: str
+    ) -> Dict[str, Any]:
+        """Authenticate audio scouting account using browser sessionid cookie and save session."""
+        session_path = self._get_sync_session_path(chat_id)
+        cl = self._create_client()
+
+        def _do_login():
+            try:
+                clean_sid = sessionid.strip().strip('"').strip("'")
+                cl.login_by_sessionid(clean_sid)
+                cl.dump_settings(session_path)
+                username = cl.username
+                user_info = cl.user_info(cl.user_id)
+                return {
+                    "success": True,
+                    "username": username,
+                    "full_name": user_info.full_name,
+                    "pk": cl.user_id,
+                }
+            except Exception as e:
+                logger.exception(f"Audio sync Instagram session login failed: {e}")
+                return {"success": False, "error": str(e)}
+
+        result = await asyncio.to_thread(_do_login)
+        if result.get("success"):
+            logger.info(f"Instagram audio scout user @{result['username']} connected via sessionid for chat {chat_id}")
+        return result
+
+    async def get_sync_client(self, chat_id: int) -> Optional[Client]:
+        """Retrieve instagrapi Client for audio scouting (saved/liked reels).
+        Prefers dedicated scout account (audio_sync_{chat_id}.json),
+        falling back to regular authenticated client if not present.
+        """
+        sync_path = self._get_sync_session_path(chat_id)
+        if sync_path.exists():
+            cl = self._create_client()
+            try:
+                cl.load_settings(sync_path)
+                return cl
+            except Exception as e:
+                logger.warning(f"Could not load audio sync session for {chat_id}: {e}")
+
+        # Fallback to main client
+        return await self.get_authenticated_client(chat_id)
 
     async def get_authenticated_client(self, chat_id: int) -> Optional[Client]:
         """Retrieve instagrapi Client with active session."""
@@ -173,24 +223,32 @@ class InstagramService:
     get_client = get_authenticated_client
 
     async def get_graph_credentials(self, chat_id: int) -> Optional[Dict[str, str]]:
-        """Check for official Graph API account ID and access token."""
+        """Check for official Graph API account ID and access token for the active account."""
         import os
-        # 1. User-specific DB credentials
+        active = await db_manager.get_active_account(chat_id)
+        if active and active.get("graph_account_id") and active.get("graph_token"):
+            return {
+                "account_id": active["graph_account_id"].strip(),
+                "access_token": active["graph_token"].strip(),
+                "username": active.get("username", "instagram"),
+            }
+
+        # User-specific DB credentials
         acct_id = await db_manager.get_setting(f"graph_account_{chat_id}")
         token = await db_manager.get_setting(f"graph_token_{chat_id}")
         username = await db_manager.get_setting(f"graph_user_{chat_id}")
 
-        # 2. Global DB or environment variables fallback
+        # Global DB or environment variables fallback
         if not (acct_id and token):
             acct_id = await db_manager.get_setting("graph_account_id") or os.environ.get("INSTAGRAM_GRAPH_ACCOUNT_ID")
             token = await db_manager.get_setting("graph_access_token") or os.environ.get("INSTAGRAM_GRAPH_ACCESS_TOKEN")
-            username = await db_manager.get_setting("graph_username") or os.environ.get("INSTAGRAM_GRAPH_USERNAME", "night_thought_12")
+            username = await db_manager.get_setting("graph_username") or os.environ.get("INSTAGRAM_GRAPH_USERNAME")
 
         if acct_id and token:
             return {
                 "account_id": acct_id.strip(),
                 "access_token": token.strip(),
-                "username": username or "night_thought_12",
+                "username": username or (active.get("username") if active else "night_thought_12"),
             }
         return None
 
@@ -203,33 +261,53 @@ class InstagramService:
 
     async def is_connected(self, chat_id: int) -> Optional[Dict[str, Any]]:
         """Check if an active Instagram account is linked (Graph API or instagrapi)."""
+        active = await db_manager.get_active_account(chat_id)
         graph_creds = await self.get_graph_credentials(chat_id)
         if graph_creds:
             return {
-                "username": graph_creds.get("username", "night_thought_12"),
+                "username": graph_creds.get("username", active.get("username", "night_thought_12") if active else "night_thought_12"),
                 "account_id": graph_creds.get("account_id"),
                 "type": "meta_graph_api",
+                "alias": active.get("alias", "default") if active else "default",
+                "engine_type": active.get("engine_type", "aesthetic") if active else "aesthetic",
+                "auto_post": active.get("auto_post", 1) if active else 1,
             }
-        acc = await db_manager.get_instagram_account(chat_id)
-        if acc:
-            return acc
+        if active:
+            s_file = Path(active["session_file"]) if active.get("session_file") else self._get_session_path(chat_id)
+            if s_file.exists():
+                return active
 
         # Auto-recover from existing session file on disk (resilient across DB resets / cloud redeploys)
         session_path = self._get_session_path(chat_id)
         if session_path.exists():
             try:
                 username = "night_thought_12"
-                await db_manager.save_instagram_account(
+                await db_manager.save_managed_account(
                     chat_id=chat_id,
+                    alias="night",
                     username=username,
                     session_file=str(session_path),
-                    auto_post=1
+                    auto_post=1,
+                    engine_type="aesthetic",
+                    set_active=True,
                 )
                 logger.info(f"[InstagramService] Auto-recovered active session for @{username} (chat {chat_id})")
-                return await db_manager.get_instagram_account(chat_id)
+                return await db_manager.get_active_account(chat_id)
             except Exception as e:
                 logger.warning(f"[InstagramService] Failed to auto-recover session: {e}")
         return None
+
+    async def switch_account(self, chat_id: int, target: str) -> Optional[Dict[str, Any]]:
+        """Switch active account between Engine 1 (@night_thought_12) and Engine 2 (@aryafeed.in)."""
+        return await db_manager.switch_active_account(chat_id, target)
+
+    async def list_accounts(self, chat_id: int) -> List[Dict[str, Any]]:
+        """List all accounts configured for this chat."""
+        return await db_manager.list_managed_accounts(chat_id)
+
+    async def get_active_account(self, chat_id: int) -> Optional[Dict[str, Any]]:
+        """Get currently active account."""
+        return await db_manager.get_active_account(chat_id)
 
     async def set_autopost(self, chat_id: int, enabled: bool) -> bool:
         """Enable or disable automatic posting on reel creation."""

@@ -21,6 +21,8 @@ from bot.handlers.commands import (
     start_command,
     status_command,
     sync_music_command,
+    sync_folder_command,
+    handle_sync_folder_callback,
     templates_command,
 )
 from bot.handlers.media import (
@@ -52,12 +54,15 @@ from bot.handlers.instagram_handler import (
     insta_login_command,
     insta_2fa_command,
     insta_session_command,
+    scout_session_command,
     insta_status_command,
     insta_autopost_command,
     insta_logout_command,
     handle_post_to_insta_callback,
     insta_graph_command,
     insta_graph_status_command,
+    account_command,
+    handle_account_callbacks,
 )
 from bot.utils.cleanup import cleanup_expired_outputs
 from bot.utils.config import config, mask_token
@@ -169,6 +174,7 @@ async def setup_bot() -> Application:
     app.add_handler(CommandHandler("set_gemini_key", set_gemini_key_command))
     app.add_handler(CommandHandler("set_openai_key", set_openai_key_command))
     app.add_handler(CommandHandler(["sync_music", "sync_audio", "sync_songs"], sync_music_command))
+    app.add_handler(CommandHandler(["sync_folder", "scout_folder"], sync_folder_command))
 
     # Register Media & Content Handlers
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
@@ -182,13 +188,17 @@ async def setup_bot() -> Application:
     app.add_handler(CallbackQueryHandler(handle_auto_callbacks, pattern=r"^(cat_|pick_|shuffle_|back_|auto_|reel_|gen_|fetch_|reset_|upload_|studio_)"))
     app.add_handler(CallbackQueryHandler(handle_post_to_insta_callback, pattern=r"^post_insta"))
     app.add_handler(CallbackQueryHandler(handle_autopilot_callbacks, pattern=r"^(autopilot_|cancel_autopost_|post_now_|user_posting_)"))
+    app.add_handler(CallbackQueryHandler(handle_account_callbacks, pattern=r"^switch_acc_"))
+    app.add_handler(CallbackQueryHandler(handle_sync_folder_callback, pattern=r"^sync_fold_"))
 
     # Register Autopilot & Instagram Commands
     app.add_handler(CommandHandler(["autopilot", "schedule"], autopilot_command))
     app.add_handler(CommandHandler(["testing_mode", "test_mode", "testing"], testing_mode_command))
+    app.add_handler(CommandHandler(["account", "accounts"], account_command))
     app.add_handler(CommandHandler("insta_login", insta_login_command))
     app.add_handler(CommandHandler("insta_2fa", insta_2fa_command))
     app.add_handler(CommandHandler("insta_session", insta_session_command))
+    app.add_handler(CommandHandler(["scout_session", "sync_session"], scout_session_command))
     app.add_handler(CommandHandler("insta_status", insta_status_command))
     app.add_handler(CommandHandler("insta_autopost", insta_autopost_command))
     app.add_handler(CommandHandler("insta_logout", insta_logout_command))

@@ -25,6 +25,10 @@ class TemplateStyle:
     ken_burns: str = "zoom_in"  # "zoom_in", "zoom_out", "pan", "none"
     fade_seconds: float = 0.5
     highlight_color: Tuple[int, int, int, int] = (255, 220, 50, 255)
+    brand_badge: bool = False
+    brand_text: str = "ARYAFEED.IN"
+    brand_badge_color: Tuple[int, int, int, int] = (255, 220, 0, 255)
+    source_tag: bool = False
 
 
 TEMPLATES = {
@@ -177,6 +181,51 @@ TEMPLATES = {
         ken_burns="zoom_in",
         fade_seconds=0.7,
         highlight_color=(255, 220, 50, 255),
+    ),
+    "news_banner": TemplateStyle(
+        key="news_banner",
+        display_name="AryaFeed News ⚡",
+        description="Bold yellow/white breaking news banner with [ARYAFEED.IN] pill and high-impact readability",
+        base_font_size=74,
+        text_color=(255, 255, 255, 255),
+        stroke_color=(0, 0, 0, 255),
+        stroke_width=6,
+        shadow_color=(0, 0, 0, 230),
+        shadow_offset=(4, 6),
+        vertical_align="lower_center",
+        is_uppercase=True,
+        box_scrim=False,
+        ken_burns="zoom_in",
+        fade_seconds=0.4,
+        highlight_color=(255, 220, 0, 255),  # AryaFeed Signature Yellow
+        brand_badge=True,
+        brand_text="ARYAFEED.IN",
+        brand_badge_color=(255, 220, 0, 255),
+    ),
+    "news_card": TemplateStyle(
+        key="news_card",
+        display_name="AryaFeed Card 📰",
+        description="Curiosity news card with sleek dark card container, yellow accent & top brand pill",
+        base_font_size=66,
+        text_color=(255, 255, 255, 255),
+        stroke_color=None,
+        stroke_width=0,
+        shadow_color=(0, 0, 0, 220),
+        shadow_offset=(3, 5),
+        vertical_align="lower_center",
+        is_uppercase=True,
+        quote_marks=False,
+        box_scrim=True,
+        scrim_color=(12, 12, 12, 215),  # High-contrast premium dark card
+        scrim_radius=28,
+        scrim_padding=44,
+        ken_burns="none",
+        fade_seconds=0.3,
+        highlight_color=(255, 220, 0, 255),  # AryaFeed Signature Yellow
+        brand_badge=True,
+        brand_text="ARYAFEED.IN",
+        brand_badge_color=(255, 220, 0, 255),
+        source_tag=True,
     ),
 }
 

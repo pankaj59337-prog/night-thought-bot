@@ -18,13 +18,24 @@ logger = logging.getLogger(__name__)
 
 
 def build_template_keyboard() -> InlineKeyboardMarkup:
-    """Build interactive inline buttons for the 5 templates."""
+    """Build interactive inline buttons for available templates."""
     keyboard = [
-        [InlineKeyboardButton("1. Cinematic 🎬", callback_data="tmpl_cinematic")],
-        [InlineKeyboardButton("2. Meme 😂", callback_data="tmpl_meme")],
-        [InlineKeyboardButton("3. Romantic 💖", callback_data="tmpl_romantic")],
-        [InlineKeyboardButton("4. Quote 📜", callback_data="tmpl_quote")],
-        [InlineKeyboardButton("5. Minimal ✨", callback_data="tmpl_minimal")],
+        [
+            InlineKeyboardButton("⚡ AryaFeed News", callback_data="tmpl_news_banner"),
+            InlineKeyboardButton("📰 AryaFeed Card", callback_data="tmpl_news_card"),
+        ],
+        [
+            InlineKeyboardButton("🎬 Cinematic", callback_data="tmpl_cinematic"),
+            InlineKeyboardButton("😂 Meme", callback_data="tmpl_meme"),
+        ],
+        [
+            InlineKeyboardButton("💖 Romantic", callback_data="tmpl_romantic"),
+            InlineKeyboardButton("📜 Quote", callback_data="tmpl_quote"),
+        ],
+        [
+            InlineKeyboardButton("✨ Minimal", callback_data="tmpl_minimal"),
+            InlineKeyboardButton("💋 Sexy / Hot", callback_data="tmpl_sexy"),
+        ],
     ]
     return InlineKeyboardMarkup(keyboard)
 

@@ -202,6 +202,66 @@ async def insta_session_command(update: Update, context: ContextTypes.DEFAULT_TY
         )
 
 
+async def scout_session_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /scout_session <sessionid> to connect a personal scouting account for audio syncing."""
+    chat_id = update.effective_chat.id
+    msg = update.effective_message
+
+    # Safety: delete user message containing sessionid immediately
+    try:
+        await context.bot.delete_message(chat_id=chat_id, message_id=msg.message_id)
+    except Exception as e:
+        logger.warning(f"Could not delete scout session message for security: {e}")
+
+    args = context.args or []
+    if not args:
+        help_text = (
+            "ℹ️ **Audio Scout Account Setup:**\n\n"
+            "`/scout_session <sessionid_cookie>`\n\n"
+            "This connects your personal browsing account (where you save reels/songs) "
+            "as a **read-only scout**. It will **never** post reels to this account!\n\n"
+            "💡 *Steps:*\n"
+            "1. Open Instagram in your browser on your personal account.\n"
+            "2. Press F12 -> Application -> Cookies -> instagram.com -> Copy `sessionid`.\n"
+            "3. Send `/scout_session <sessionid>` here."
+        )
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=help_text,
+            parse_mode="Markdown"
+        )
+        return
+
+    sessionid = args[0].strip()
+
+    status_msg = await context.bot.send_message(
+        chat_id=chat_id,
+        text="⏳ *Authenticating Audio Scout account with Instagram...* Please wait.",
+        parse_mode="Markdown"
+    )
+
+    res = await instagram_service.login_sync_sessionid(chat_id, sessionid)
+
+    if res.get("success"):
+        username = res.get("username", "")
+        success_text = (
+            f"🎧 *Audio Scout Account Connected!*\n\n"
+            f"👤 **Scout Account:** @{username}\n"
+            f"🔒 **Mode:** Read-Only (Audio & Trending Music Scout)\n\n"
+            f"Whenever you like (❤️) or save (🔖) reels on @{username}, run `/sync_music` "
+            f"to automatically pull those tracks into the bot's playlist!"
+        )
+        await status_msg.edit_text(success_text, parse_mode="Markdown")
+    else:
+        err = res.get("error", "Unknown error occurred.")
+        await status_msg.edit_text(
+            f"❌ *Audio Scout Connection Failed:*\n\n{err}",
+            parse_mode="Markdown"
+        )
+
+
+
+
 
 async def insta_status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle /insta_status to check account link state."""
@@ -425,3 +485,91 @@ async def insta_graph_status_command(update: Update, context: ContextTypes.DEFAU
                 "❌ No Instagram account connected yet.\nUse `/insta_graph` or `/insta_login`.",
                 parse_mode="Markdown",
             )
+
+
+async def account_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /account or /accounts [alias] to view or switch active account."""
+    chat_id = update.effective_chat.id
+    args = context.args or []
+
+    if args:
+        target = args[0].strip()
+        switched = await instagram_service.switch_account(chat_id, target)
+        if switched:
+            alias = switched.get("alias", target)
+            username = switched.get("username", "")
+            engine = "Aesthetic Autopilot 🌙" if switched.get("engine_type") == "aesthetic" else "AryaFeed Viral News ⚡"
+            autopost = "🟢 Enabled" if switched.get("auto_post") else "⚪ Disabled"
+
+            confirm_msg = (
+                f"🔄 *Active Account Switched Successfully!*\n\n"
+                f"• 👤 **Account:** @{username}\n"
+                f"• 🏷️ **Alias:** `{alias}`\n"
+                f"• 🚀 **Engine:** *{engine}*\n"
+                f"• ⚡ **Auto-Post:** {autopost}\n\n"
+                f"All future reels and commands will now target **@{username}**! 🎬"
+            )
+            await update.effective_message.reply_text(confirm_msg, parse_mode="Markdown")
+            return
+        else:
+            await update.effective_message.reply_text(
+                f"⚠️ Account `{target}` not found.\nAvailable accounts: `/account night` or `/account arya`.",
+                parse_mode="Markdown",
+            )
+            return
+
+    # No arguments: show list and interactive switch buttons
+    accounts = await instagram_service.list_accounts(chat_id)
+    active = await instagram_service.get_active_account(chat_id)
+
+    lines = ["📱 *Instagram Multi-Account Manager*\n"]
+    if active:
+        engine_label = "Aesthetic Autopilot 🌙" if active.get("engine_type") == "aesthetic" else "AryaFeed Media ⚡"
+        lines.append(f"🟢 *Current Active:* **@{active.get('username')}** (`{active.get('alias')}`)\n• Engine: _{engine_label}_\n")
+
+    lines.append("*Registered Accounts:*")
+    buttons = []
+    for acc in accounts:
+        alias = acc.get("alias", "")
+        username = acc.get("username", "")
+        is_curr = acc.get("is_active") == 1
+        indicator = "✅ Active" if is_curr else "⚪ Inactive"
+        engine = "Engine 1 (Aesthetic)" if acc.get("engine_type") == "aesthetic" else "Engine 2 (AryaFeed News)"
+        lines.append(f"• **@{username}** (`{alias}`) — {engine} — {indicator}")
+
+        # Add button if not active
+        if not is_curr:
+            label = f"Switch to @{username}"
+            buttons.append([InlineKeyboardButton(label, callback_data=f"switch_acc_{alias}")])
+
+    lines.append("\n💡 *Switch via command:*")
+    lines.append("• `/account night` — @night_thought_12 (Engine 1)")
+    lines.append("• `/account arya` — @aryafeed.in (Engine 2)")
+
+    keyboard = InlineKeyboardMarkup(buttons) if buttons else None
+    await update.effective_message.reply_text("\n".join(lines), reply_markup=keyboard, parse_mode="Markdown")
+
+
+async def handle_account_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle inline button callback for switching accounts: switch_acc_<alias>."""
+    query = update.callback_query
+    await query.answer()
+    chat_id = update.effective_chat.id
+    data = query.data or ""
+
+    if data.startswith("switch_acc_"):
+        target_alias = data.replace("switch_acc_", "").strip()
+        switched = await instagram_service.switch_account(chat_id, target_alias)
+        if switched:
+            username = switched.get("username", "")
+            engine = "Aesthetic Autopilot 🌙" if switched.get("engine_type") == "aesthetic" else "AryaFeed Viral News ⚡"
+            await query.edit_message_text(
+                f"✅ *Active Account Changed to @{username}!* 🚀\n\n"
+                f"• Engine: *{engine}*\n"
+                f"• Alias: `{target_alias}`\n\n"
+                f"All newly rendered reels will now be routed to **@{username}**!",
+                parse_mode="Markdown",
+            )
+        else:
+            await query.message.reply_text(f"⚠️ Could not switch to account `{target_alias}`.")
+

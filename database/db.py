@@ -58,6 +58,23 @@ CREATE TABLE IF NOT EXISTS synced_instagram_audio (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_synced_audio ON synced_instagram_audio(audio_id);
+
+CREATE TABLE IF NOT EXISTS managed_accounts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    telegram_chat_id INTEGER NOT NULL,
+    alias TEXT NOT NULL,
+    username TEXT NOT NULL,
+    engine_type TEXT DEFAULT 'news',
+    session_file TEXT,
+    graph_account_id TEXT,
+    graph_token TEXT,
+    auto_post INTEGER DEFAULT 0,
+    is_active INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(telegram_chat_id, alias)
+);
+CREATE INDEX IF NOT EXISTS idx_managed_accounts ON managed_accounts(telegram_chat_id, alias);
 """
 
 
@@ -80,8 +97,34 @@ class DatabaseManager:
                         telegram_chat_id, username, session_file, auto_post
                     ) VALUES (5381201341, 'night_thought_12', 'data/sessions/instagram_5381201341.json', 1);
                 """)
+
+            # Seed Dual-Engine Managed Accounts for user 5381201341
+            now = datetime.now(timezone.utc).isoformat()
+            # Engine 1: @night_thought_12 (Aesthetic Autopilot)
+            await db.execute("""
+                INSERT OR IGNORE INTO managed_accounts (
+                    telegram_chat_id, alias, username, engine_type, session_file, auto_post, is_active, created_at, updated_at
+                ) VALUES (
+                    5381201341, 'night', 'night_thought_12', 'aesthetic', 'data/sessions/instagram_5381201341.json', 1, 1, ?, ?
+                );
+            """, (now, now))
+
+            # Engine 2: @aryafeed.in (AryaFeed Media / Viral News)
+            await db.execute("""
+                INSERT OR IGNORE INTO managed_accounts (
+                    telegram_chat_id, alias, username, engine_type, session_file, auto_post, is_active, created_at, updated_at
+                ) VALUES (
+                    5381201341, 'arya', 'aryafeed.in', 'news', 'data/sessions/instagram_aryafeed.json', 0, 0, ?, ?
+                );
+            """, (now, now))
+
+            # Ensure at least one account is marked active
+            async with db.execute("SELECT 1 FROM managed_accounts WHERE telegram_chat_id = 5381201341 AND is_active = 1") as cur:
+                if not await cur.fetchone():
+                    await db.execute("UPDATE managed_accounts SET is_active = 1 WHERE telegram_chat_id = 5381201341 AND alias = 'night'")
+
             await db.commit()
-            logger.info(f"Database initialized at {self.db_path}")
+            logger.info(f"Database initialized at {self.db_path} with Dual-Engine accounts")
 
     async def get_session(self, chat_id: int) -> Optional[Dict[str, Any]]:
         """Retrieve the active session dictionary for a specific Telegram chat ID."""
@@ -184,7 +227,10 @@ class DatabaseManager:
             await db.commit()
 
     async def get_instagram_account(self, chat_id: int) -> Optional[Dict[str, Any]]:
-        """Retrieve Instagram account details for a chat ID."""
+        """Retrieve Instagram account details for a chat ID (delegates to active managed account)."""
+        active = await self.get_active_account(chat_id)
+        if active:
+            return active
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute(
@@ -195,6 +241,138 @@ class DatabaseManager:
             if row:
                 return dict(row)
             return None
+
+    async def list_managed_accounts(self, chat_id: int) -> List[Dict[str, Any]]:
+        """List all configured Instagram accounts for this chat."""
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                "SELECT * FROM managed_accounts WHERE telegram_chat_id = ? ORDER BY id ASC",
+                (chat_id,),
+            )
+            rows = await cursor.fetchall()
+            return [dict(r) for r in rows]
+
+    async def get_active_account(self, chat_id: int) -> Optional[Dict[str, Any]]:
+        """Retrieve the currently active Instagram account for this chat."""
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                "SELECT * FROM managed_accounts WHERE telegram_chat_id = ? AND is_active = 1 LIMIT 1",
+                (chat_id,),
+            )
+            row = await cursor.fetchone()
+            if row:
+                return dict(row)
+
+            # Fallback: first account in managed_accounts
+            cursor = await db.execute(
+                "SELECT * FROM managed_accounts WHERE telegram_chat_id = ? ORDER BY id ASC LIMIT 1",
+                (chat_id,),
+            )
+            row = await cursor.fetchone()
+            if row:
+                return dict(row)
+
+            # Fallback: legacy instagram_accounts table
+            cursor = await db.execute(
+                "SELECT * FROM instagram_accounts WHERE telegram_chat_id = ?",
+                (chat_id,),
+            )
+            row = await cursor.fetchone()
+            if row:
+                d = dict(row)
+                d["alias"] = "night"
+                d["engine_type"] = "aesthetic"
+                d["is_active"] = 1
+                return d
+            return None
+
+    async def switch_active_account(self, chat_id: int, target: str) -> Optional[Dict[str, Any]]:
+        """Switch active account by alias or username (e.g. 'night', 'arya', 'aryafeed.in')."""
+        t = target.lower().strip().lstrip("@")
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                """
+                SELECT * FROM managed_accounts 
+                WHERE telegram_chat_id = ? AND (LOWER(alias) = ? OR LOWER(username) = ? OR LOWER(alias) LIKE ?)
+                LIMIT 1
+                """,
+                (chat_id, t, t, f"{t}%"),
+            )
+            match = await cursor.fetchone()
+            if not match:
+                return None
+
+            matched_dict = dict(match)
+            matched_alias = matched_dict["alias"]
+
+            # Set all to inactive then activate target
+            await db.execute(
+                "UPDATE managed_accounts SET is_active = 0 WHERE telegram_chat_id = ?",
+                (chat_id,),
+            )
+            await db.execute(
+                "UPDATE managed_accounts SET is_active = 1 WHERE telegram_chat_id = ? AND alias = ?",
+                (chat_id, matched_alias),
+            )
+            # Sync to legacy table for backward compatibility
+            await db.execute(
+                """
+                INSERT OR REPLACE INTO instagram_accounts (
+                    telegram_chat_id, username, session_file, auto_post
+                ) VALUES (?, ?, ?, ?)
+                """,
+                (chat_id, matched_dict["username"], matched_dict.get("session_file") or "", matched_dict.get("auto_post", 0)),
+            )
+            await db.commit()
+            matched_dict["is_active"] = 1
+            return matched_dict
+
+    async def save_managed_account(
+        self,
+        chat_id: int,
+        alias: str,
+        username: str,
+        session_file: Optional[str] = None,
+        graph_account_id: Optional[str] = None,
+        graph_token: Optional[str] = None,
+        auto_post: int = 0,
+        engine_type: str = "news",
+        set_active: bool = False,
+    ) -> None:
+        """Create or update a managed Instagram account."""
+        now = datetime.now(timezone.utc).isoformat()
+        clean_alias = alias.lower().strip()
+        clean_user = username.strip().lstrip("@")
+        async with aiosqlite.connect(self.db_path) as db:
+            if set_active:
+                await db.execute("UPDATE managed_accounts SET is_active = 0 WHERE telegram_chat_id = ?", (chat_id,))
+
+            await db.execute(
+                """
+                INSERT INTO managed_accounts (
+                    telegram_chat_id, alias, username, engine_type, session_file,
+                    graph_account_id, graph_token, auto_post, is_active, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(telegram_chat_id, alias) DO UPDATE SET
+                    username=excluded.username,
+                    engine_type=excluded.engine_type,
+                    session_file=COALESCE(excluded.session_file, managed_accounts.session_file),
+                    graph_account_id=COALESCE(excluded.graph_account_id, managed_accounts.graph_account_id),
+                    graph_token=COALESCE(excluded.graph_token, managed_accounts.graph_token),
+                    auto_post=excluded.auto_post,
+                    is_active=CASE WHEN ? = 1 THEN 1 ELSE managed_accounts.is_active END,
+                    updated_at=excluded.updated_at;
+                """,
+                (
+                    chat_id, clean_alias, clean_user, engine_type, session_file,
+                    graph_account_id, graph_token, auto_post, 1 if set_active else 0,
+                    now, now, 1 if set_active else 0
+                ),
+            )
+            await db.commit()
 
     async def set_instagram_autopost(self, chat_id: int, auto_post: bool) -> None:
         """Toggle auto_post flag for a user's Instagram account."""

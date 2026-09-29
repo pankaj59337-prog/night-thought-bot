@@ -87,6 +87,13 @@ CATEGORIES: Dict[str, Dict[str, Any]] = {
         "desc": "Golden hour glow, peaceful vibes, soft lifestyle & calm soul",
         "style": "minimal",
     },
+    "news": {
+        "id": "news",
+        "title": "AryaFeed Viral News",
+        "icon": "⚡",
+        "desc": "High-curiosity news, trending Indian milestones, CCTV & relatable culture",
+        "style": "news_banner",
+    },
 }
 
 # 30 Curated Authentic Candid Reference Aesthetics (100% real photo aesthetic, zero CGI)
@@ -815,6 +822,15 @@ ALL_IMAGE_OPTIONS: List[Dict[str, Any]] = [
 
 # Curated Viral Lyrical Hindi/Hinglish Hooks & Quotes categorized across 8 vibes
 ALL_HOOK_OPTIONS: List[Dict[str, Any]] = [
+    # AryaFeed Viral News, Trending & Cultural Hooks
+    {'id': 'h_news_1', 'text': '22 FRIENDS STUDIED TOGETHER, *21 CRACKED* THE EXAM 🥹🎓', 'categories': ['news']},
+    {'id': 'h_news_2', 'text': 'TEA VENDOR\'S DAUGHTER CRACKS *UPSC EXAM* IN FIRST ATTEMPT 🇮🇳✨', 'categories': ['news']},
+    {'id': 'h_news_3', 'text': 'SWIGGY DELIVERY GUY RETURNS *₹15 LAKH CASH* LEFT IN CAB 👏🛵', 'categories': ['news']},
+    {'id': 'h_news_4', 'text': 'MAN BUYS OLD SCOOTER FOR ₹20,000, FINDS *₹50 LAKH GOLD* HIDDEN 🤯🪙', 'categories': ['news']},
+    {'id': 'h_news_5', 'text': 'INDIA WINS *HISTORIC GOLD* AFTER 48 YEARS, STADIUM TEARS UP 🇮🇳🏆', 'categories': ['news']},
+    {'id': 'h_news_6', 'text': 'VIRAL CCTV: BOY RISKS LIFE TO SAVE STREET DOG FROM *SPEEDING TRUCK* 🐶💔', 'categories': ['news']},
+    {'id': 'h_news_7', 'text': 'FATHER WORKED AS LABOURER FOR 25 YEARS TO MAKE SON *IPS OFFICER* 🫡🇮🇳', 'categories': ['news']},
+    {'id': 'h_news_8', 'text': 'VIRAL: CRICKETER SCORES CENTURY ON HIS *MOTHER\'S BIRTHDAY* 🏏❤️', 'categories': ['news']},
     {'id': 'h_sex_1', 'text': 'hume dekh kar muskurana aapki aadat hai ya niyat? 💋', 'categories': ['sexy']},
     {'id': 'h_sex_2', 'text': 'teri ek jhalak hi kafi hai madhosh karne ke liye... 🔥', 'categories': ['sexy']},
     {'id': 'h_sex_3', 'text': 'itni haseen ho ki nazar hatana gunah lagta hai... 💋', 'categories': ['sexy']},

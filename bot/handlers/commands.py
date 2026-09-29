@@ -3,7 +3,7 @@
 import logging
 from functools import wraps
 from typing import Callable
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
 from bot.templates.styles import TEMPLATES
@@ -43,8 +43,9 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         "• Type /reel to upload your own photo/video, custom text, and music\\.\n\n"
         "⚡ *Commands:*\n"
         "• `/auto` \\- One\\-tap AI autonomous creator\n"
+        "• `/account` \\- Switch between @night\\_thought\\_12 and @aryafeed\\.in\n"
         "• `/reel` \\- Manual reel creator\n"
-        "• `/templates` \\- Browse all 6 styles \\(including Sexy 💋\\)\n"
+        "• `/templates` \\- Browse all styles \\(including AryaFeed News ⚡\\)\n"
         "• `/status` \\- Check active job\n"
         "• `/cancel` \\- Discard active job\n"
         "• `/help` \\- Full guide"
@@ -57,7 +58,10 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle /help command."""
     help_text = (
-        "📖 *Reel Maker Bot Guide*\n\n"
+        "📖 *Reel Maker Bot Guide & Dual-Engine Architecture*\n\n"
+        "🚀 *Dual-Engine Account Switching:*\n"
+        "• `/account night` — @night_thought_12 (Engine 1: Aesthetic Autopilot)\n"
+        "• `/account arya` — @aryafeed.in (Engine 2: AryaFeed Viral News)\n\n"
         "*Step 1: Media*\n"
         "• Send photos (JPG, PNG, WebP) or videos (MP4, MOV, MKV).\n"
         "• Images automatically get a smooth Ken Burns pan/zoom.\n"
@@ -65,13 +69,12 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         f"• Max video size: {config.max_video_size_mb} MB.\n\n"
         "*Step 2: Text*\n"
         "• Text wraps automatically and fits Instagram safe margins.\n"
-        "• Font size adapts dynamically for longer quotes.\n\n"
+        "• Yellow highlight accent auto-applied to impact words.\n\n"
         "*Step 3: Music*\n"
         "• Send any audio/MP3, or type /skip to keep original audio or silent track.\n"
-        "• Background music automatically ducks under original video dialogue.\n"
         f"• Max audio size: {config.max_audio_size_mb} MB.\n\n"
         "*Step 4: Templates*\n"
-        "• Choose from 5 styles: Cinematic, Meme, Romantic, Quote, or Minimal.\n\n"
+        "• Choose from styles including AryaFeed News ⚡, AryaFeed Card 📰, Cinematic 🎬, Meme 😂, etc.\n\n"
         "Use /cancel anytime to discard an active draft."
     )
     if update.effective_message:
@@ -174,3 +177,110 @@ async def sync_music_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
             await status_msg.edit_text(err_text, parse_mode="Markdown")
         elif update.effective_message:
             await update.effective_message.reply_text(err_text, parse_mode="Markdown")
+
+
+@restricted
+async def sync_folder_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /sync_folder command to select or view the Instagram Saved collection used for music sync."""
+    chat_id = update.effective_chat.id
+    from bot.services.audio_sync_service import audio_sync_service
+
+    status_msg = None
+    if update.effective_message:
+        status_msg = await update.effective_message.reply_text("📂 *Loading your Instagram Saved Folders...*", parse_mode="Markdown")
+
+    try:
+        colls = await audio_sync_service.get_collections(chat_id)
+        if not colls:
+            msg = "⚠️ *Could not fetch Instagram folders.*\nEnsure your scout account is connected with `/scout_session <cookie>`."
+            if status_msg:
+                await status_msg.edit_text(msg, parse_mode="Markdown")
+            return
+
+        current_target = await audio_sync_service.get_target_collection(chat_id)
+        current_id = current_target.get("id") or "ALL_MEDIA_AUTO_COLLECTION"
+
+        # Check if user passed folder name as argument: /sync_folder <name>
+        args = context.args or []
+        if args:
+            search_name = " ".join(args).strip().lower()
+            matched = next((c for c in colls if search_name in c["name"].lower()), None)
+            if matched:
+                await audio_sync_service.set_target_collection(chat_id, matched["id"], matched["name"])
+                text = (
+                    f"✅ *Audio Sync Folder Updated!*\n\n"
+                    f"📁 **Active Folder:** `{matched['name']}`\n\n"
+                    f"Ab se aap Instagram par jab bhi iss folder me koi reel save karenge, "
+                    f"bot `/sync_music` chalane par sirf isi folder se trending music pick karega! 🎧"
+                )
+                if status_msg:
+                    await status_msg.edit_text(text, parse_mode="Markdown")
+                return
+            else:
+                avail = ", ".join([f"`{c['name']}`" for c in colls])
+                text = f"❌ *Folder '{search_name}' not found.*\nAvailable folders: {avail}"
+                if status_msg:
+                    await status_msg.edit_text(text, parse_mode="Markdown")
+                return
+
+        # Render interactive buttons
+        buttons = []
+        for c in colls:
+            is_active = (c["id"] == current_id)
+            label = f"{'✅ ' if is_active else '📁 '}{c['name']}"
+            buttons.append([InlineKeyboardButton(text=label, callback_data=f"sync_fold_{c['id']}")])
+
+        # Option for all posts
+        is_all = (current_id == "ALL_MEDIA_AUTO_COLLECTION" or not current_id)
+        buttons.append([InlineKeyboardButton(
+            text=f"{'✅ ' if is_all else '🌐 '}All Saved Posts (Default)",
+            callback_data="sync_fold_ALL_MEDIA_AUTO_COLLECTION"
+        )])
+
+        reply_markup = InlineKeyboardMarkup(buttons)
+        text = (
+            "📁 *Select Instagram Saved Folder for Music Sync:*\n\n"
+            "Choose the folder where you save reels with trending songs.\n"
+            "The bot will scout audio *only* from your chosen folder!\n\n"
+            f"• Current Active: *{current_target.get('name') or 'All Saved Posts'}*"
+        )
+        if status_msg:
+            await status_msg.edit_text(text, reply_markup=reply_markup, parse_mode="Markdown")
+        elif update.effective_message:
+            await update.effective_message.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
+
+    except Exception as e:
+        err = f"⚠️ *Error getting folders:* {e}"
+        if status_msg:
+            await status_msg.edit_text(err, parse_mode="Markdown")
+
+
+async def handle_sync_folder_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle clicking on a folder selection button."""
+    query = update.callback_query
+    await query.answer()
+
+    data = query.data or ""
+    chat_id = update.effective_chat.id
+    target_id = data.replace("sync_fold_", "").strip()
+
+    from bot.services.audio_sync_service import audio_sync_service
+
+    if target_id == "ALL_MEDIA_AUTO_COLLECTION":
+        await audio_sync_service.set_target_collection(chat_id, "ALL_MEDIA_AUTO_COLLECTION", "All Saved Posts")
+        folder_name = "All Saved Posts"
+    else:
+        colls = await audio_sync_service.get_collections(chat_id)
+        matched = next((c for c in colls if c["id"] == target_id), None)
+        folder_name = matched["name"] if matched else "Selected Folder"
+        await audio_sync_service.set_target_collection(chat_id, target_id, folder_name)
+
+    await query.edit_message_text(
+        f"✅ *Audio Sync Folder Updated!*\n\n"
+        f"📁 **Active Folder:** `{folder_name}`\n\n"
+        f"Ab se aap jab bhi Instagram par iss folder me koi reel save karenge, "
+        f"bot `/sync_music` me sirf isi folder se trending audio pick karega! 🎧\n\n"
+        f"_Tip: Try saving 1-2 reels into this folder, then type /sync_music!_",
+        parse_mode="Markdown"
+    )
+

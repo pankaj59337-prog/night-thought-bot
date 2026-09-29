@@ -46,12 +46,25 @@ HIGHLIGHT_KEYWORDS: Set[str] = {
     "bestie", "besties", "baddie", "savage", "attitude", "favorite", "drama", "unbreakable",
     "unbothered", "champagne", "standard", "glam", "aesthetic", "goals", "chaos",
     "prize", "crush", "storm", "friends", "friend", "sister", "unhinged",
+    # Viral News, Cricket, Exam & Culture keywords (AryaFeed Engine)
+    "crore", "crores", "lakh", "lakhs", "arrested", "cracked", "exam", "won", "wins",
+    "world", "record", "viral", "police", "gold", "shocking", "historic", "scam",
+    "trophy", "champion", "ipl", "bcci", "india", "isro", "scandal", "unbelievable",
+    "secret", "hero", "shameful", "justice", "truth", "revealed", "cctv", "caught",
+    "ias", "ips", "upsc", "neet", "jee", "billionaire", "richest", "shocker",
 }
 
 
 def extract_highlight_targets(raw_text: str) -> Tuple[str, Set[str]]:
     """Extract explicit words in *asterisks* or detect key emotional keywords for accent highlighting."""
-    explicit_matches = set(m.lower() for m in re.findall(r"\*([^*]+)\*", raw_text))
+    raw_matches = re.findall(r"\*([^*]+)\*", raw_text)
+    explicit_matches = set()
+    for m in raw_matches:
+        for w in m.split():
+            clean_w = re.sub(r'^[^\w]+|[^\w]+$', '', w).lower()
+            if clean_w:
+                explicit_matches.add(clean_w)
+
     clean_text = re.sub(r"\*([^*]+)\*", r"\1", raw_text)
 
     if explicit_matches:
@@ -94,6 +107,101 @@ def load_font(font_path: Path, size: int) -> ImageFont.FreeTypeFont:
                 continue
 
     return ImageFont.load_default()
+
+
+def extract_source_tag(raw_text: str) -> Tuple[str, Optional[str]]:
+    """Extract source citation like [Per NDTV] or 'Per Hindustan Times' if present."""
+    m = re.match(r"^\[?(Per\s+[A-Za-z0-9\s]+|Source:\s*[A-Za-z0-9\s]+)\]?\s*[:-]?\s*", raw_text, re.IGNORECASE)
+    if m:
+        source = m.group(1).strip("[] ")
+        rest = raw_text[m.end():].strip()
+        return rest, source
+    return raw_text, None
+
+
+def draw_brand_watermark(
+    canvas: Image.Image,
+    brand: str = "ARYAFEED.IN",
+    font_path: Optional[Path] = None,
+    position: str = "top",
+    bg_color: Tuple[int, int, int, int] = (255, 220, 0, 255),
+    text_color: Tuple[int, int, int, int] = (10, 10, 10, 255),
+    source_text: Optional[str] = None,
+) -> None:
+    """Draw signature [ ARYAFEED.IN ] yellow media pill watermark badge on canvas."""
+    draw = ImageDraw.Draw(canvas)
+    badge_text = brand.upper().strip()
+    if not badge_text:
+        return
+
+    if font_path is None:
+        font_path = config.font_path
+
+    # Bold font for brand pill
+    badge_font_size = 36
+    badge_font = load_font(font_path, badge_font_size)
+
+    bbox = draw.textbbox((0, 0), badge_text, font=badge_font)
+    tw = bbox[2] - bbox[0]
+    th = bbox[3] - bbox[1]
+
+    pad_x = 28
+    pad_y = 10
+    badge_w = tw + (pad_x * 2)
+    badge_h = th + (pad_y * 2)
+    radius = 16
+
+    if position == "top":
+        badge_x = (CANVAS_WIDTH - badge_w) // 2
+        badge_y = SAFE_MARGIN_TOP + 20
+    elif position == "top_left":
+        badge_x = SAFE_MARGIN_X
+        badge_y = SAFE_MARGIN_TOP + 20
+    else:  # bottom
+        badge_x = (CANVAS_WIDTH - badge_w) // 2
+        badge_y = CANVAS_HEIGHT - SAFE_MARGIN_BOTTOM - badge_h - 20
+
+    # 1. Soft atmospheric drop shadow behind pill
+    draw.rounded_rectangle(
+        (badge_x - 1, badge_y + 4, badge_x + badge_w + 1, badge_y + badge_h + 5),
+        radius=radius,
+        fill=(0, 0, 0, 160),
+    )
+
+    # 2. Signature Yellow Media Pill
+    draw.rounded_rectangle(
+        (badge_x, badge_y, badge_x + badge_w, badge_y + badge_h),
+        radius=radius,
+        fill=bg_color,
+    )
+
+    # 3. High-contrast bold black text
+    text_x = badge_x + pad_x - bbox[0]
+    text_y = badge_y + pad_y - bbox[1]
+    draw.text((text_x, text_y), badge_text, font=badge_font, fill=text_color)
+
+    # 4. Optional source citation badge (e.g. "Per NDTV")
+    if source_text:
+        src_clean = source_text.strip().upper()
+        src_font_size = 28
+        src_font = load_font(font_path, src_font_size)
+        s_bbox = draw.textbbox((0, 0), src_clean, font=src_font)
+        s_tw = s_bbox[2] - s_bbox[0]
+        s_th = s_bbox[3] - s_bbox[1]
+        s_pad_x = 18
+        s_pad_y = 6
+        s_w = s_tw + (s_pad_x * 2)
+        s_h = s_th + (s_pad_y * 2)
+        s_x = (CANVAS_WIDTH - s_w) // 2
+        s_y = badge_y + badge_h + 12
+
+        # Translucent dark pill for source
+        draw.rounded_rectangle(
+            (s_x, s_y, s_x + s_w, s_y + s_h),
+            radius=12,
+            fill=(20, 20, 20, 190),
+        )
+        draw.text((s_x + s_pad_x - s_bbox[0], s_y + s_pad_y - s_bbox[1]), src_clean, font=src_font, fill=(230, 230, 230, 240))
 
 
 def wrap_text(text: str, font: ImageFont.ImageFont, max_width: int, draw: ImageDraw.ImageDraw) -> List[str]:
@@ -187,13 +295,17 @@ def create_text_overlay(
     template: TemplateStyle,
     output_png_path: Path,
     font_path: Optional[Path] = None,
+    brand: Optional[str] = None,
 ) -> Path:
     """Generate 1080x1920 transparent PNG with styled, wrapped text."""
     if font_path is None:
         font_path = config.font_path
 
-    # Extract highlighted words (*asterisks* or auto-detected emotional keywords)
-    clean_text, target_highlights = extract_highlight_targets(text.strip())
+    # Extract source citation if present (e.g. [Per NDTV] or 'Per Hindustan Times')
+    clean_raw, source_tag = extract_source_tag(text.strip())
+
+    # Extract highlighted words (*asterisks* or auto-detected emotional/news keywords)
+    clean_text, target_highlights = extract_highlight_targets(clean_raw)
 
     # Pre-process text according to template
     if template.is_uppercase:
@@ -205,6 +317,20 @@ def create_text_overlay(
     # Create transparent canvas
     canvas = Image.new("RGBA", (CANVAS_WIDTH, CANVAS_HEIGHT), (0, 0, 0, 0))
     draw = ImageDraw.Draw(canvas)
+
+    # Draw Brand Watermark Pill if requested by template or explicit brand parameter
+    should_badge = (brand is not None) or getattr(template, "brand_badge", False)
+    if should_badge:
+        brand_name = brand or getattr(template, "brand_text", "ARYAFEED.IN")
+        badge_bg = getattr(template, "brand_badge_color", (255, 220, 0, 255))
+        draw_brand_watermark(
+            canvas=canvas,
+            brand=brand_name,
+            font_path=font_path,
+            position="top",
+            bg_color=badge_bg,
+            source_text=source_tag,
+        )
 
     # Adapt layout
     font, lines, text_w, text_h, line_spacing = calculate_text_layout(
@@ -241,6 +367,8 @@ def create_text_overlay(
             radius=template.scrim_radius,
             fill=template.scrim_color,
         )
+
+    target_highlights_lower = set(h.lower() for h in target_highlights)
 
     # Render each line with shadow and stroke
     current_y = start_y
@@ -291,7 +419,7 @@ def create_text_overlay(
                     text_x = line_x
                     for w, ww in zip(words, word_widths):
                         clean_w = re.sub(r'^[^\w]+|[^\w]+$', '', w).lower()
-                        is_hl = (clean_w in target_highlights) or any(t == clean_w for t in target_highlights)
+                        is_hl = clean_w in target_highlights_lower
                         w_color = template.highlight_color if is_hl else template.text_color
                         p_draw.text(
                             (text_x, current_y),
@@ -311,7 +439,7 @@ def create_text_overlay(
             text_x = line_x
             for w, ww in zip(words, word_widths):
                 clean_w = re.sub(r'^[^\w]+|[^\w]+$', '', w).lower()
-                is_hl = (clean_w in target_highlights) or any(t == clean_w for t in target_highlights)
+                is_hl = clean_w in target_highlights_lower
                 w_color = template.highlight_color if is_hl else template.text_color
                 fallback_w = emoji.replace_emoji(w, replace="").strip() if emoji else w
                 draw.text(
