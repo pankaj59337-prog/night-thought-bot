@@ -103,7 +103,9 @@ def _run_early_health_server() -> None:
 
     def _daemon_pinger():
         time.sleep(15)
-        url = "https://insta-reel-maker-bot.onrender.com/"
+        url = os.environ.get("RENDER_EXTERNAL_URL") or "https://night-thought-bot.onrender.com/"
+        if not url.endswith("/"):
+            url += "/"
         while True:
             try:
                 req = urllib.request.Request(url, headers={"User-Agent": "DaemonKeepAlive/1.0"})
@@ -250,7 +252,9 @@ async def global_error_handler(update: object, context: ContextTypes.DEFAULT_TYP
 
 async def render_keep_alive_job(context: ContextTypes.DEFAULT_TYPE) -> None:
     """Periodically ping Render web service to prevent Free Tier from sleeping."""
-    url = "https://insta-reel-maker-bot.onrender.com/"
+    url = os.environ.get("RENDER_EXTERNAL_URL") or "https://night-thought-bot.onrender.com/"
+    if not url.endswith("/"):
+        url += "/"
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "RenderKeepAlive/1.0"})
         with urllib.request.urlopen(req, timeout=20) as resp:
