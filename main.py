@@ -42,7 +42,8 @@ def _run_early_health_server() -> None:
                     try:
                         with open("bot.log", "r", encoding="utf-8", errors="replace") as f:
                             lines = f.readlines()
-                            content += "=== BOT LOG (last 100 lines) ===\n" + "".join(lines[-100:])
+                            filtered = [l for l in lines if "getUpdates" not in l]
+                            content += "=== BOT LOG (last 200 non-getUpdates events) ===\n" + "".join(filtered[-200:])
                     except Exception as e:
                         content += f"Error reading bot.log: {e}\n"
                 if not content:
