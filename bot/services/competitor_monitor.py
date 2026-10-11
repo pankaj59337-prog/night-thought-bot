@@ -138,7 +138,7 @@ class CompetitorMonitorService:
         return any(handle in clean for handle in COMPETITOR_HANDLES)
 
     def clean_caption_for_aryafeed(self, raw_caption: str, source_account: str) -> str:
-        """Strip competitor handles/promos and format clean AryaFeed caption."""
+        """Strip competitor handles/promos, replace competitor titles with AryaFeed, and format clean caption."""
         lines = (raw_caption or "").split("\n")
         clean_lines = []
         for line in lines:
@@ -151,11 +151,178 @@ class CompetitorMonitorService:
             clean_lines.append(line)
 
         body = "\n".join(clean_lines).strip()
+        # Replace any residual competitor titles with AryaFeed
+        for comp_name in ["rvcjinsta", "rvcj", "comedyculture.in", "comedyculture", "flirting.lines", "flirtinglines", "adultsociety"]:
+            body = re.sub(re.escape(comp_name), "AryaFeed", body, flags=re.IGNORECASE)
+
         if not body:
             body = "⚡ Daily dose of viral stories, memes & thoughts!"
 
         hashtags = "\n\nFollow @aryafeed.in for daily buzz ⚡\n#aryafeed #viral #trending #reels #memes #explore #india"
         return body + hashtags
+
+    def clean_and_rebrand_image(
+        self,
+        input_path: Path,
+        output_path: Path,
+        target_username: str,
+        brand: str = "ARYAFEED",
+    ) -> Path:
+        """Detect competitor logos, inpaint them seamlessly, and apply [ ARYAFEED ] branding."""
+        import cv2
+        import numpy as np
+        from PIL import Image, ImageDraw
+        from bot.services.text_overlay import load_font
+
+        cv_img = cv2.imread(str(input_path))
+        if cv_img is None:
+            return stamp_image_watermark(input_path, output_path, brand)
+
+        h, w = cv_img.shape[:2]
+        scale = max(0.5, min(2.5, w / 1080.0))
+        clean_u = (target_username or "").lower().replace(".", "")
+
+        if "comedyculture" in clean_u:
+            # 1. Inpaint top-left logo (circular red logo + ComedyCulture text)
+            mask = np.zeros((h, w), dtype=np.uint8)
+            mask[0:int(h * 0.10), 0:int(w * 0.26)] = 255
+            inp = cv2.inpaint(cv_img, mask, 5, cv2.INPAINT_TELEA)
+
+            pil_img = Image.fromarray(cv2.cvtColor(inp, cv2.COLOR_BGR2RGB))
+            draw = ImageDraw.Draw(pil_img)
+
+            # Draw [ ARYAFEED ] yellow pill at top-left
+            badge_font = load_font(config.font_path, int(30 * scale))
+            bbox = draw.textbbox((0, 0), brand, font=badge_font)
+            pad_x, pad_y = int(20 * scale), int(8 * scale)
+            bw = (bbox[2] - bbox[0]) + pad_x * 2
+            bh = (bbox[3] - bbox[1]) + pad_y * 2
+            bx, by = int(24 * scale), int(24 * scale)
+            radius = int(10 * scale)
+
+            draw.rounded_rectangle([(bx - 2, by + 2), (bx + bw + 2, by + bh + 3)], radius=radius, fill=(0, 0, 0, 150))
+            draw.rounded_rectangle([(bx, by), (bx + bw, by + bh)], radius=radius, fill=(255, 220, 0, 255))
+            tx = bx + pad_x - bbox[0]
+            ty = by + pad_y - bbox[1]
+            draw.text((tx, ty), brand, font=badge_font, fill=(10, 10, 10, 255))
+
+        elif "flirtinglines" in clean_u:
+            # Inpaint top-left logo (flirting lines >>)
+            mask = np.zeros((h, w), dtype=np.uint8)
+            mask[0:int(h * 0.10), 0:int(w * 0.22)] = 255
+            inp = cv2.inpaint(cv_img, mask, 4, cv2.INPAINT_TELEA)
+
+            pil_img = Image.fromarray(cv2.cvtColor(inp, cv2.COLOR_BGR2RGB))
+            draw = ImageDraw.Draw(pil_img)
+
+            badge_font = load_font(config.font_path, int(26 * scale))
+            bbox = draw.textbbox((0, 0), brand, font=badge_font)
+            pad_x, pad_y = int(16 * scale), int(6 * scale)
+            bw = (bbox[2] - bbox[0]) + pad_x * 2
+            bh = (bbox[3] - bbox[1]) + pad_y * 2
+            bx, by = int(18 * scale), int(18 * scale)
+            radius = int(8 * scale)
+
+            draw.rounded_rectangle([(bx - 1, by + 1), (bx + bw + 1, by + bh + 2)], radius=radius, fill=(0, 0, 0, 140))
+            draw.rounded_rectangle([(bx, by), (bx + bw, by + bh)], radius=radius, fill=(255, 220, 0, 255))
+            tx = bx + pad_x - bbox[0]
+            ty = by + pad_y - bbox[1]
+            draw.text((tx, ty), brand, font=badge_font, fill=(10, 10, 10, 255))
+
+        elif "rvcj" in clean_u:
+            # Check if RVCJ top yellow logo exists at top-center
+            roi_top = cv_img[:int(h * 0.12), int(w * 0.35):int(w * 0.65)]
+            hsv_top = cv2.cvtColor(roi_top, cv2.COLOR_BGR2HSV)
+            mask_yellow = cv2.inRange(hsv_top, np.array([20, 100, 100]), np.array([35, 255, 255]))
+            has_top_box = (np.count_nonzero(mask_yellow) > 500)
+
+            # Check if mid watermark exists
+            roi_mid = cv_img[int(h * 0.44):int(h * 0.52), int(w * 0.70):int(w * 0.85)]
+            hsv_mid = cv2.cvtColor(roi_mid, cv2.COLOR_BGR2HSV)
+            mask_cyan = cv2.inRange(hsv_mid, np.array([80, 80, 80]), np.array([105, 255, 255]))
+            has_mid_wm = (np.count_nonzero(mask_cyan) > 50)
+
+            if has_mid_wm:
+                mask_mid = np.zeros((h, w), dtype=np.uint8)
+                mask_mid[int(h * 0.44):int(h * 0.52), int(w * 0.70):int(w * 0.85)] = 255
+                cv_img = cv2.inpaint(cv_img, mask_mid, 4, cv2.INPAINT_TELEA)
+
+            pil_img = Image.fromarray(cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB))
+            draw = ImageDraw.Draw(pil_img)
+
+            if has_top_box:
+                box_x1 = int(w * 0.38)
+                box_x2 = int(w * 0.62)
+                top_bar_h = int(46 * scale)
+                sample_color = pil_img.getpixel((int(w * 0.2), int(20 * scale)))
+                draw.rectangle([(box_x1, 0), (box_x2, top_bar_h)], fill=sample_color)
+                draw.rectangle([(box_x1, top_bar_h + 1), (box_x2, int(120 * scale))], fill=(255, 255, 255))
+
+                badge_font = load_font(config.font_path, int(34 * scale))
+                bbox = draw.textbbox((0, 0), brand, font=badge_font)
+                pad_x, pad_y = int(24 * scale), int(10 * scale)
+                bw = (bbox[2] - bbox[0]) + pad_x * 2
+                bh = (bbox[3] - bbox[1]) + pad_y * 2
+                bx = (w - bw) // 2
+                by = int(18 * scale)
+                radius = int(12 * scale)
+
+                draw.rounded_rectangle([(bx - 2, by + 2), (bx + bw + 2, by + bh + 4)], radius=radius, fill=(0, 0, 0, 140))
+                draw.rounded_rectangle([(bx, by), (bx + bw, by + bh)], radius=radius, fill=(255, 220, 0, 255))
+                tx = bx + pad_x - bbox[0]
+                ty = by + pad_y - bbox[1]
+                draw.text((tx, ty), brand, font=badge_font, fill=(10, 10, 10, 255))
+            else:
+                badge_font = load_font(config.font_path, int(30 * scale))
+                bbox = draw.textbbox((0, 0), brand, font=badge_font)
+                pad_x, pad_y = int(20 * scale), int(8 * scale)
+                bw = (bbox[2] - bbox[0]) + pad_x * 2
+                bh = (bbox[3] - bbox[1]) + pad_y * 2
+                bx, by = int(24 * scale), int(24 * scale)
+                radius = int(10 * scale)
+
+                draw.rounded_rectangle([(bx - 2, by + 2), (bx + bw + 2, by + bh + 3)], radius=radius, fill=(0, 0, 0, 150))
+                draw.rounded_rectangle([(bx, by), (bx + bw, by + bh)], radius=radius, fill=(255, 220, 0, 255))
+                tx = bx + pad_x - bbox[0]
+                ty = by + pad_y - bbox[1]
+                draw.text((tx, ty), brand, font=badge_font, fill=(10, 10, 10, 255))
+
+            footer_y = int(h * 0.95)
+            draw.rectangle([(0, footer_y), (w, h)], fill=(12, 12, 16))
+            footer_font = load_font(config.font_path, int(26 * scale))
+            ftext = "FOLLOW @ARYAFEED.IN FOR VIRAL UPDATES"
+            fbbox = draw.textbbox((0, 0), ftext, font=footer_font)
+            ftw = fbbox[2] - fbbox[0]
+            fth = fbbox[3] - fbbox[1]
+            ftx = (w - ftw) // 2
+            fty = footer_y + (h - footer_y - fth) // 2 - fbbox[1]
+            draw.text((ftx, fty), ftext, font=footer_font, fill=(255, 220, 0, 255))
+
+        else:
+            mask = np.zeros((h, w), dtype=np.uint8)
+            mask[0:int(h * 0.08), 0:int(w * 0.20)] = 255
+            inp = cv2.inpaint(cv_img, mask, 4, cv2.INPAINT_TELEA)
+
+            pil_img = Image.fromarray(cv2.cvtColor(inp, cv2.COLOR_BGR2RGB))
+            draw = ImageDraw.Draw(pil_img)
+
+            badge_font = load_font(config.font_path, int(28 * scale))
+            bbox = draw.textbbox((0, 0), brand, font=badge_font)
+            pad_x, pad_y = int(18 * scale), int(7 * scale)
+            bw = (bbox[2] - bbox[0]) + pad_x * 2
+            bh = (bbox[3] - bbox[1]) + pad_y * 2
+            bx, by = int(20 * scale), int(20 * scale)
+            radius = int(10 * scale)
+
+            draw.rounded_rectangle([(bx - 2, by + 2), (bx + bw + 2, by + bh + 3)], radius=radius, fill=(0, 0, 0, 150))
+            draw.rounded_rectangle([(bx, by), (bx + bw, by + bh)], radius=radius, fill=(255, 220, 0, 255))
+            tx = bx + pad_x - bbox[0]
+            ty = by + pad_y - bbox[1]
+            draw.text((tx, ty), brand, font=badge_font, fill=(10, 10, 10, 255))
+
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        pil_img.save(output_path, "JPEG", quality=95)
+        return output_path
 
     async def scan_and_rebrand_competitors(
         self,
@@ -224,15 +391,15 @@ class CompetitorMonitorService:
                     # Check for competitor branding
                     has_branding = self.check_competitor_branding(raw_caption)
 
-                    # Process file: stamp [ ARYAFEED ] watermark
+                    # Process file: clean competitor branding and rebrand with [ ARYAFEED ]
                     processed_path = config.output_dir / f"arya_{target_username}_{post_id}_{timestamp}{ext}"
 
                     if media_type == "video":
                         # Embed watermark preserving original audio
                         await asyncio.to_thread(stamp_video_watermark, dl_path, processed_path, "ARYAFEED")
                     else:
-                        # Stamp watermark on photo/meme
-                        await asyncio.to_thread(stamp_image_watermark, dl_path, processed_path, "ARYAFEED")
+                        # Clean competitor logo/strip and stamp [ ARYAFEED ] branding
+                        await asyncio.to_thread(self.clean_and_rebrand_image, dl_path, processed_path, target_username, "ARYAFEED")
 
                     # Upload to Instagram
                     ig_result = {}
@@ -367,11 +534,11 @@ class CompetitorMonitorService:
         processed_path = config.output_dir / f"arya_spy_{target_username}_{post_id}_{timestamp}{ext}"
 
         if media_type == "video":
-            # Preserve original audio stream, embed watermark on bottom-right
+            # Preserve original audio stream, embed watermark
             await asyncio.to_thread(stamp_video_watermark, dl_path, processed_path, "ARYAFEED")
         else:
-            # Stamp yellow pill watermark on photo/meme card
-            await asyncio.to_thread(stamp_image_watermark, dl_path, processed_path, "ARYAFEED")
+            # Clean competitor logo/strip and stamp [ ARYAFEED ] branding
+            await asyncio.to_thread(self.clean_and_rebrand_image, dl_path, processed_path, target_username, "ARYAFEED")
 
         # Upload immediately to Instagram @aryafeed.in
         if media_type == "video":
