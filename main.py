@@ -2,6 +2,19 @@
 
 import os
 import sys
+
+# Ensure sys.stdout and sys.stderr are valid even when run via pythonw (where they default to None)
+if sys.stdout is None:
+    try:
+        sys.stdout = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "bot_stdout.log"), "a", encoding="utf-8", buffering=1)
+    except Exception:
+        pass
+if sys.stderr is None:
+    try:
+        sys.stderr = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "bot_stderr.log"), "a", encoding="utf-8", buffering=1)
+    except Exception:
+        pass
+
 import threading
 import time
 import urllib.request

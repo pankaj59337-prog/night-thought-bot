@@ -191,43 +191,64 @@ class CompetitorMonitorService:
             pil_img = Image.fromarray(cv2.cvtColor(inp, cv2.COLOR_BGR2RGB))
             draw = ImageDraw.Draw(pil_img)
 
-            # Draw [ ARYAFEED ] yellow pill at top-left
-            badge_font = load_font(config.font_path, int(30 * scale))
-            bbox = draw.textbbox((0, 0), brand, font=badge_font)
-            pad_x, pad_y = int(20 * scale), int(8 * scale)
-            bw = (bbox[2] - bbox[0]) + pad_x * 2
-            bh = (bbox[3] - bbox[1]) + pad_y * 2
-            bx, by = int(24 * scale), int(24 * scale)
-            radius = int(10 * scale)
+            # Draw signature >> aryafeed.in at top-left
+            font_size = int(24 * scale)
+            try:
+                sig_font = ImageFont.truetype("C:/Windows/Fonts/ariblk.ttf", font_size)
+            except Exception:
+                sig_font = load_font(config.font_path, font_size)
 
-            draw.rounded_rectangle([(bx - 2, by + 2), (bx + bw + 2, by + bh + 3)], radius=radius, fill=(0, 0, 0, 150))
-            draw.rounded_rectangle([(bx, by), (bx + bw, by + bh)], radius=radius, fill=(255, 220, 0, 255))
-            tx = bx + pad_x - bbox[0]
-            ty = by + pad_y - bbox[1]
-            draw.text((tx, ty), brand, font=badge_font, fill=(10, 10, 10, 255))
+            white = (255, 255, 255)
+            red = (235, 35, 45)
+            shadow = (15, 25, 35)
+            sx = int(24 * scale)
+            sy = int(24 * scale)
+
+            w_ch = draw.textbbox((0, 0), ">> ", font=sig_font)[2]
+            w_af = draw.textbbox((0, 0), "aryafeed", font=sig_font)[2]
+
+            for dx, dy in [(1, 1), (2, 2)]:
+                draw.text((sx + dx, sy + dy), ">> ", font=sig_font, fill=shadow)
+                draw.text((sx + w_ch + dx, sy + dy), "aryafeed", font=sig_font, fill=shadow)
+                draw.text((sx + w_ch + w_af + dx, sy + dy), ".in", font=sig_font, fill=shadow)
+
+            draw.text((sx, sy), ">> ", font=sig_font, fill=red)
+            draw.text((sx + w_ch, sy), "aryafeed", font=sig_font, fill=white)
+            draw.text((sx + w_ch + w_af, sy), ".in", font=sig_font, fill=red)
 
         elif "flirtinglines" in clean_u:
             # Inpaint top-left logo (flirting lines >>)
             mask = np.zeros((h, w), dtype=np.uint8)
-            mask[0:int(h * 0.10), 0:int(w * 0.22)] = 255
+            mask[0:int(h * 0.12), 0:int(w * 0.25)] = 255
             inp = cv2.inpaint(cv_img, mask, 4, cv2.INPAINT_TELEA)
 
             pil_img = Image.fromarray(cv2.cvtColor(inp, cv2.COLOR_BGR2RGB))
             draw = ImageDraw.Draw(pil_img)
 
-            badge_font = load_font(config.font_path, int(26 * scale))
-            bbox = draw.textbbox((0, 0), brand, font=badge_font)
-            pad_x, pad_y = int(16 * scale), int(6 * scale)
-            bw = (bbox[2] - bbox[0]) + pad_x * 2
-            bh = (bbox[3] - bbox[1]) + pad_y * 2
-            bx, by = int(18 * scale), int(18 * scale)
-            radius = int(8 * scale)
+            # Locked Signature Style: >> aryafeed.in (Red >>, White aryafeed, Red .in)
+            font_size = int(22 * scale)
+            try:
+                sig_font = ImageFont.truetype("C:/Windows/Fonts/ariblk.ttf", font_size)
+            except Exception:
+                sig_font = load_font(config.font_path, font_size)
 
-            draw.rounded_rectangle([(bx - 1, by + 1), (bx + bw + 1, by + bh + 2)], radius=radius, fill=(0, 0, 0, 140))
-            draw.rounded_rectangle([(bx, by), (bx + bw, by + bh)], radius=radius, fill=(255, 220, 0, 255))
-            tx = bx + pad_x - bbox[0]
-            ty = by + pad_y - bbox[1]
-            draw.text((tx, ty), brand, font=badge_font, fill=(10, 10, 10, 255))
+            white = (255, 255, 255)
+            red = (235, 35, 45)
+            shadow = (15, 25, 35)
+            sx = int(28 * scale)
+            sy = int(22 * scale)
+
+            w_ch = draw.textbbox((0, 0), ">> ", font=sig_font)[2]
+            w_af = draw.textbbox((0, 0), "aryafeed", font=sig_font)[2]
+
+            for dx, dy in [(1, 1), (2, 2)]:
+                draw.text((sx + dx, sy + dy), ">> ", font=sig_font, fill=shadow)
+                draw.text((sx + w_ch + dx, sy + dy), "aryafeed", font=sig_font, fill=shadow)
+                draw.text((sx + w_ch + w_af + dx, sy + dy), ".in", font=sig_font, fill=shadow)
+
+            draw.text((sx, sy), ">> ", font=sig_font, fill=red)
+            draw.text((sx + w_ch, sy), "aryafeed", font=sig_font, fill=white)
+            draw.text((sx + w_ch + w_af, sy), ".in", font=sig_font, fill=red)
 
         elif "rvcj" in clean_u:
             # Check if RVCJ top yellow logo exists at top-center
@@ -250,6 +271,22 @@ class CompetitorMonitorService:
             pil_img = Image.fromarray(cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB))
             draw = ImageDraw.Draw(pil_img)
 
+            # Draw locked signature >> aryafeed.in branding
+            font_size = int(24 * scale)
+            try:
+                sig_font = ImageFont.truetype("C:/Windows/Fonts/ariblk.ttf", font_size)
+            except Exception:
+                sig_font = load_font(config.font_path, font_size)
+
+            white = (255, 255, 255)
+            red = (235, 35, 45)
+            shadow = (15, 25, 35)
+
+            w_ch = draw.textbbox((0, 0), ">> ", font=sig_font)[2]
+            w_af = draw.textbbox((0, 0), "aryafeed", font=sig_font)[2]
+            w_in = draw.textbbox((0, 0), ".in", font=sig_font)[2]
+            tot_w = w_ch + w_af + w_in
+
             if has_top_box:
                 box_x1 = int(w * 0.38)
                 box_x2 = int(w * 0.62)
@@ -257,35 +294,20 @@ class CompetitorMonitorService:
                 sample_color = pil_img.getpixel((int(w * 0.2), int(20 * scale)))
                 draw.rectangle([(box_x1, 0), (box_x2, top_bar_h)], fill=sample_color)
                 draw.rectangle([(box_x1, top_bar_h + 1), (box_x2, int(120 * scale))], fill=(255, 255, 255))
-
-                badge_font = load_font(config.font_path, int(34 * scale))
-                bbox = draw.textbbox((0, 0), brand, font=badge_font)
-                pad_x, pad_y = int(24 * scale), int(10 * scale)
-                bw = (bbox[2] - bbox[0]) + pad_x * 2
-                bh = (bbox[3] - bbox[1]) + pad_y * 2
-                bx = (w - bw) // 2
-                by = int(18 * scale)
-                radius = int(12 * scale)
-
-                draw.rounded_rectangle([(bx - 2, by + 2), (bx + bw + 2, by + bh + 4)], radius=radius, fill=(0, 0, 0, 140))
-                draw.rounded_rectangle([(bx, by), (bx + bw, by + bh)], radius=radius, fill=(255, 220, 0, 255))
-                tx = bx + pad_x - bbox[0]
-                ty = by + pad_y - bbox[1]
-                draw.text((tx, ty), brand, font=badge_font, fill=(10, 10, 10, 255))
+                sx = (w - tot_w) // 2
+                sy = int(28 * scale)
             else:
-                badge_font = load_font(config.font_path, int(30 * scale))
-                bbox = draw.textbbox((0, 0), brand, font=badge_font)
-                pad_x, pad_y = int(20 * scale), int(8 * scale)
-                bw = (bbox[2] - bbox[0]) + pad_x * 2
-                bh = (bbox[3] - bbox[1]) + pad_y * 2
-                bx, by = int(24 * scale), int(24 * scale)
-                radius = int(10 * scale)
+                sx = int(24 * scale)
+                sy = int(24 * scale)
 
-                draw.rounded_rectangle([(bx - 2, by + 2), (bx + bw + 2, by + bh + 3)], radius=radius, fill=(0, 0, 0, 150))
-                draw.rounded_rectangle([(bx, by), (bx + bw, by + bh)], radius=radius, fill=(255, 220, 0, 255))
-                tx = bx + pad_x - bbox[0]
-                ty = by + pad_y - bbox[1]
-                draw.text((tx, ty), brand, font=badge_font, fill=(10, 10, 10, 255))
+            for dx, dy in [(1, 1), (2, 2)]:
+                draw.text((sx + dx, sy + dy), ">> ", font=sig_font, fill=shadow)
+                draw.text((sx + w_ch + dx, sy + dy), "aryafeed", font=sig_font, fill=shadow)
+                draw.text((sx + w_ch + w_af + dx, sy + dy), ".in", font=sig_font, fill=shadow)
+
+            draw.text((sx, sy), ">> ", font=sig_font, fill=red)
+            draw.text((sx + w_ch, sy), "aryafeed", font=sig_font, fill=white)
+            draw.text((sx + w_ch + w_af, sy), ".in", font=sig_font, fill=red)
 
             footer_y = int(h * 0.95)
             draw.rectangle([(0, footer_y), (w, h)], fill=(12, 12, 16))
@@ -306,19 +328,29 @@ class CompetitorMonitorService:
             pil_img = Image.fromarray(cv2.cvtColor(inp, cv2.COLOR_BGR2RGB))
             draw = ImageDraw.Draw(pil_img)
 
-            badge_font = load_font(config.font_path, int(28 * scale))
-            bbox = draw.textbbox((0, 0), brand, font=badge_font)
-            pad_x, pad_y = int(18 * scale), int(7 * scale)
-            bw = (bbox[2] - bbox[0]) + pad_x * 2
-            bh = (bbox[3] - bbox[1]) + pad_y * 2
-            bx, by = int(20 * scale), int(20 * scale)
-            radius = int(10 * scale)
+            font_size = int(22 * scale)
+            try:
+                sig_font = ImageFont.truetype("C:/Windows/Fonts/ariblk.ttf", font_size)
+            except Exception:
+                sig_font = load_font(config.font_path, font_size)
 
-            draw.rounded_rectangle([(bx - 2, by + 2), (bx + bw + 2, by + bh + 3)], radius=radius, fill=(0, 0, 0, 150))
-            draw.rounded_rectangle([(bx, by), (bx + bw, by + bh)], radius=radius, fill=(255, 220, 0, 255))
-            tx = bx + pad_x - bbox[0]
-            ty = by + pad_y - bbox[1]
-            draw.text((tx, ty), brand, font=badge_font, fill=(10, 10, 10, 255))
+            white = (255, 255, 255)
+            red = (235, 35, 45)
+            shadow = (15, 25, 35)
+            sx = int(20 * scale)
+            sy = int(20 * scale)
+
+            w_ch = draw.textbbox((0, 0), ">> ", font=sig_font)[2]
+            w_af = draw.textbbox((0, 0), "aryafeed", font=sig_font)[2]
+
+            for dx, dy in [(1, 1), (2, 2)]:
+                draw.text((sx + dx, sy + dy), ">> ", font=sig_font, fill=shadow)
+                draw.text((sx + w_ch + dx, sy + dy), "aryafeed", font=sig_font, fill=shadow)
+                draw.text((sx + w_ch + w_af + dx, sy + dy), ".in", font=sig_font, fill=shadow)
+
+            draw.text((sx, sy), ">> ", font=sig_font, fill=red)
+            draw.text((sx + w_ch, sy), "aryafeed", font=sig_font, fill=white)
+            draw.text((sx + w_ch + w_af, sy), ".in", font=sig_font, fill=red)
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
         pil_img.save(output_path, "JPEG", quality=95)
@@ -533,25 +565,33 @@ class CompetitorMonitorService:
         has_branding = self.check_competitor_branding(raw_caption)
         processed_path = config.output_dir / f"arya_spy_{target_username}_{post_id}_{timestamp}{ext}"
 
+        # Determine destination account & branding based on competitor niche
+        is_news_competitor = (target_username.lower() in ("rvcj", "rvcjinsta"))
+        dest_account = "arya" if is_news_competitor else "night"
+        dest_brand = "ARYAFEED" if is_news_competitor else "NIGHT THOUGHT"
+        dest_handle = "@aryafeed.in" if is_news_competitor else "@night_thought_12"
+
         if media_type == "video":
             # Preserve original audio stream, embed watermark
-            await asyncio.to_thread(stamp_video_watermark, dl_path, processed_path, "ARYAFEED")
+            await asyncio.to_thread(stamp_video_watermark, dl_path, processed_path, dest_brand)
         else:
-            # Clean competitor logo/strip and stamp [ ARYAFEED ] branding
-            await asyncio.to_thread(self.clean_and_rebrand_image, dl_path, processed_path, target_username, "ARYAFEED")
+            # Clean competitor logo/strip and stamp branding
+            await asyncio.to_thread(self.clean_and_rebrand_image, dl_path, processed_path, target_username, dest_brand)
 
-        # Upload immediately to Instagram @aryafeed.in
+        # Upload strictly to the matching account
         if media_type == "video":
             ig_result = await instagram_service.upload_reel(
                 chat_id=chat_id,
                 video_path=processed_path,
                 caption=clean_caption,
+                target_account=dest_account,
             )
         else:
             ig_result = await instagram_service.upload_photo(
                 chat_id=chat_id,
                 photo_path=processed_path,
                 caption=clean_caption,
+                target_account=dest_account,
             )
 
         posted_to_ig = ig_result.get("success", False)
@@ -577,11 +617,11 @@ class CompetitorMonitorService:
                     f"{status_badge}\n\n"
                     f"👤 *Source:* `@{target_username}`\n"
                     f"📂 *Type:* {'Reel' if media_type == 'video' else 'Meme Card / Photo'}\n"
-                    f"🏷️ *Brand:* `[ ARYAFEED ]` (Bottom Right)\n"
+                    f"🏷️ *Brand:* `[ {dest_brand} ]` (Bottom Right)\n"
                     f"🎵 *Audio:* Preserved Original\n\n"
                 )
                 if ig_url:
-                    caption_text += f"🚀 [Live on @aryafeed.in]({ig_url})\n"
+                    caption_text += f"🚀 [Live on {dest_handle}]({ig_url})\n"
                 elif ig_result.get("error"):
                     caption_text += f"⚠️ *Instagram Note:* {ig_result.get('error')}\n"
 
@@ -640,7 +680,12 @@ class CompetitorMonitorService:
                             for m in (medias or []):
                                 await self.process_media_item(target_username, m, chat_id, bot)
                     except Exception as e:
+                        err_str = str(e).lower()
                         logger.warning(f"[SpySentinel] Watch error for @{target_username}: {e}")
+                        if any(k in err_str for k in ("401", "403", "unauthorized", "login_required")):
+                            logger.info("[SpySentinel] Instagram session unauthenticated or expired. Pausing watch for 5 minutes.")
+                            await asyncio.sleep(300)
+                            break
 
                     # Stagger 15s between account checks for continuous, smooth monitoring
                     await asyncio.sleep(15)
@@ -650,7 +695,7 @@ class CompetitorMonitorService:
                 break
             except Exception as e:
                 logger.exception(f"[SpySentinel] Sentinel loop error: {e}")
-                await asyncio.sleep(30)
+                await asyncio.sleep(60)
 
 
 # Singleton instance

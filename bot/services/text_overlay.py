@@ -133,67 +133,49 @@ def extract_source_tag(raw_text: str) -> Tuple[str, Optional[str]]:
 
 def draw_brand_watermark(
     canvas: Image.Image,
-    brand: str = "ARYAFEED",
+    brand: str = "@night_thought_12",
     font_path: Optional[Path] = None,
     position: str = "bottom_right",
     bg_color: Tuple[int, int, int, int] = (255, 220, 0, 255),
     text_color: Tuple[int, int, int, int] = (10, 10, 10, 255),
     source_text: Optional[str] = None,
 ) -> None:
-    """Draw signature [ ARYAFEED ] yellow media pill watermark badge on canvas."""
+    """Draw signature @night_thought_12 brand watermark on canvas."""
     draw = ImageDraw.Draw(canvas)
-    badge_text = brand.upper().strip()
-    if not badge_text:
-        return
 
-    if font_path is None:
-        font_path = config.font_path
+    badge_font_size = 30
+    try:
+        badge_font = ImageFont.truetype("C:/Windows/Fonts/ariblk.ttf", badge_font_size)
+    except Exception:
+        badge_font = load_font(font_path, badge_font_size)
 
-    # Bold font for brand pill
-    badge_font_size = 34
-    badge_font = load_font(font_path, badge_font_size)
-
-    bbox = draw.textbbox((0, 0), badge_text, font=badge_font)
-    tw = bbox[2] - bbox[0]
-    th = bbox[3] - bbox[1]
-
-    pad_x = 26
-    pad_y = 10
-    badge_w = tw + (pad_x * 2)
-    badge_h = th + (pad_y * 2)
-    radius = 14
+    display_brand = "@night_thought_12" if (not brand or brand in ("ARYAFEED", "NIGHT THOUGHT", "@night_thought_12")) else brand
+    bbox = draw.textbbox((0, 0), display_brand, font=badge_font)
+    tot_w = bbox[2] - bbox[0]
+    tot_h = bbox[3] - bbox[1]
 
     if position == "top":
-        badge_x = (CANVAS_WIDTH - badge_w) // 2
+        badge_x = (CANVAS_WIDTH - tot_w) // 2
         badge_y = SAFE_MARGIN_TOP + 20
     elif position == "top_left":
         badge_x = SAFE_MARGIN_X
         badge_y = SAFE_MARGIN_TOP + 20
     elif position in ("bottom_right", "right_bottom"):
-        badge_x = CANVAS_WIDTH - 60 - badge_w
-        badge_y = CANVAS_HEIGHT - 240 - badge_h
+        badge_x = CANVAS_WIDTH - 60 - tot_w
+        badge_y = CANVAS_HEIGHT - 240 - tot_h
     else:  # bottom center
-        badge_x = (CANVAS_WIDTH - badge_w) // 2
-        badge_y = CANVAS_HEIGHT - SAFE_MARGIN_BOTTOM - badge_h - 20
+        badge_x = (CANVAS_WIDTH - tot_w) // 2
+        badge_y = CANVAS_HEIGHT - SAFE_MARGIN_BOTTOM - tot_h - 20
 
-    # 1. Soft atmospheric drop shadow behind pill
-    draw.rounded_rectangle(
-        (badge_x - 1, badge_y + 3, badge_x + badge_w + 1, badge_y + badge_h + 4),
-        radius=radius,
-        fill=(0, 0, 0, 160),
-    )
+    shadow_color = (15, 25, 35, 200)
+    white_color = (255, 255, 255, 230)
 
-    # 2. Signature Yellow Media Pill
-    draw.rounded_rectangle(
-        (badge_x, badge_y, badge_x + badge_w, badge_y + badge_h),
-        radius=radius,
-        fill=bg_color,
-    )
+    # 1. Atmospheric drop shadow
+    for dx, dy in [(1, 1), (2, 2)]:
+        draw.text((badge_x + dx, badge_y + dy), display_brand, font=badge_font, fill=shadow_color)
 
-    # 3. High-contrast bold black text
-    text_x = badge_x + pad_x - bbox[0]
-    text_y = badge_y + pad_y - bbox[1]
-    draw.text((text_x, text_y), badge_text, font=badge_font, fill=text_color)
+    # 2. Sleek signature watermark for Night Thought
+    draw.text((badge_x, badge_y), display_brand, font=badge_font, fill=white_color)
 
     # 4. Optional source citation badge (e.g. "SOURCE: INDIAN EXPRESS")
     if source_text:
@@ -212,13 +194,13 @@ def draw_brand_watermark(
 
         if position in ("bottom_right", "right_bottom"):
             s_x = 60
-            s_y = badge_y + (badge_h - s_h) // 2
+            s_y = badge_y + (tot_h - s_h) // 2
         elif position == "top":
             s_x = (CANVAS_WIDTH - s_w) // 2
-            s_y = badge_y + badge_h + 12
+            s_y = badge_y + tot_h + 12
         else:
             s_x = (CANVAS_WIDTH - s_w) // 2
-            s_y = badge_y + badge_h + 12
+            s_y = badge_y + tot_h + 12
 
         # Translucent dark pill with subtle border for source
         draw.rounded_rectangle(
@@ -345,8 +327,8 @@ def create_text_overlay(
     canvas = Image.new("RGBA", (CANVAS_WIDTH, CANVAS_HEIGHT), (0, 0, 0, 0))
     draw = ImageDraw.Draw(canvas)
 
-    # Draw Mandatory [ ARYAFEED ] Brand Title Pill across ALL reels and templates
-    brand_name = brand or getattr(template, "brand_text", "ARYAFEED") or "ARYAFEED"
+    # Draw Signature [@night_thought_12] Brand Watermark
+    brand_name = "@night_thought_12" if (not brand or brand in ("ARYAFEED", "NIGHT THOUGHT")) else brand
     badge_bg = getattr(template, "brand_badge_color", (255, 220, 0, 255))
     draw_brand_watermark(
         canvas=canvas,
@@ -499,54 +481,32 @@ def generate_preview_composite(
     template = get_template(template_key)
     create_text_overlay(text, template, temp_overlay)
 
-    from PIL import ImageFilter, ImageDraw
+    from PIL import ImageDraw
 
     with Image.open(image_path) as raw_img:
         raw_img = raw_img.convert("RGBA")
         iw, ih = raw_img.size
-        aspect_img = iw / ih
 
-        # Background: blurred and darkened atmospheric version
-        bg = raw_img.resize((CANVAS_WIDTH // 4, CANVAS_HEIGHT // 4), Image.Resampling.BOX)
-        bg = bg.filter(ImageFilter.GaussianBlur(12))
-        bg = bg.resize((CANVAS_WIDTH, CANVAS_HEIGHT), Image.Resampling.BILINEAR)
-        dark_tint = Image.new("RGBA", (CANVAS_WIDTH, CANVAS_HEIGHT), (8, 8, 12, 190))
-        bg = Image.alpha_composite(bg, dark_tint)
+        # Full-bleed cover: scale to completely fill 1080x1920 without black bars or blur
+        scale = max(CANVAS_WIDTH / iw, CANVAS_HEIGHT / ih)
+        target_w = max(1, int(iw * scale))
+        target_h = max(1, int(ih * scale))
+        scaled = raw_img.resize((target_w, target_h), Image.Resampling.LANCZOS)
 
-        if aspect_img > 1.15:  # Landscape editorial news photo
-            target_w = CANVAS_WIDTH
-            target_h = int(ih * (target_w / iw))
-            photo_y = 150
-            if target_h > 1000:
-                target_h = 1000
-                target_w = int(iw * (target_h / ih))
-                photo_x = (CANVAS_WIDTH - target_w) // 2
-            else:
-                photo_x = 0
+        # Center crop to 1080x1920
+        crop_x = (target_w - CANVAS_WIDTH) // 2
+        crop_y = (target_h - CANVAS_HEIGHT) // 2
+        bg = scaled.crop((crop_x, crop_y, crop_x + CANVAS_WIDTH, crop_y + CANVAS_HEIGHT))
 
-            fg = raw_img.resize((target_w, target_h), Image.Resampling.LANCZOS)
-            fade_h = int(target_h * 0.25)
-            mask = Image.new("L", (target_w, target_h), 255)
-            mdraw = ImageDraw.Draw(mask)
-            for y in range(target_h - fade_h, target_h):
-                val = int(255 * (1.0 - (y - (target_h - fade_h)) / fade_h))
-                mdraw.line([(0, y), (target_w, y)], fill=val)
-            fg.putalpha(mask)
-            bg.paste(fg, (photo_x, photo_y), fg)
-
-            # Deep dark gradient in lower portion for text readability
-            grad = Image.new("RGBA", (CANVAS_WIDTH, CANVAS_HEIGHT), (0, 0, 0, 0))
-            gdraw = ImageDraw.Draw(grad)
-            start_grad = photo_y + target_h - fade_h
-            for y in range(start_grad, CANVAS_HEIGHT):
-                f = min(1.0, (y - start_grad) / max(1, CANVAS_HEIGHT - start_grad))
-                gdraw.line([(0, y), (CANVAS_WIDTH, y)], fill=(8, 8, 12, int(230 * f)))
-            bg = Image.alpha_composite(bg, grad)
-        else:
-            scale = min(CANVAS_WIDTH / iw, CANVAS_HEIGHT / ih)
-            new_w, new_h = max(1, int(iw * scale)), max(1, int(ih * scale))
-            fg = raw_img.resize((new_w, new_h), Image.Resampling.LANCZOS)
-            bg.paste(fg, ((CANVAS_WIDTH - new_w) // 2, (CANVAS_HEIGHT - new_h) // 2))
+        # Soft dark gradient on lower portion so text directly on image is crystal clear
+        grad = Image.new("RGBA", (CANVAS_WIDTH, CANVAS_HEIGHT), (0, 0, 0, 0))
+        gdraw = ImageDraw.Draw(grad)
+        start_grad = int(CANVAS_HEIGHT * 0.45)
+        for y in range(start_grad, CANVAS_HEIGHT):
+            f = min(1.0, (y - start_grad) / max(1, CANVAS_HEIGHT - start_grad))
+            alpha = int(185 * (f ** 1.3))
+            gdraw.line([(0, y), (CANVAS_WIDTH, y)], fill=(8, 8, 12, alpha))
+        bg = Image.alpha_composite(bg, grad)
 
         with Image.open(temp_overlay) as txt_img:
             composite = Image.alpha_composite(bg, txt_img.convert("RGBA"))

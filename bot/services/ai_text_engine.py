@@ -124,6 +124,58 @@ MEME_HOOKS = [
     "Adulting is literally saying 'it is what it is' until you pass out.",
     "My patience level right now is at 2% with battery saver off.",
     "When someone asks 'what do you do for fun?' and you just lay in bed on your phone.",
+    "Salary aati hai toh lagta hai Ambani hoon, teesre din Maggi pe aa jata hoon.",
+    "Single hone ka ek faida hai: koi puchne wala nahi 'kis se baat kar rahe the?'",
+    "Ghar wale: Kuch kaam kar liya kar.\nMe: Sans toh le raha hoon, aur kitna karu?",
+    "Overthinking is my cardio, tension is my protein shake.",
+    "Mummy: Beta mobile me kya laga rehta hai?\nMe: Apni barbadi ka tamasha dekh raha hoon.",
+    "Me replying to a reel in 2 seconds but taking 4 business days to reply to a normal text.",
+    "Sleep schedule itna kharab hai ki America ke timezone me jee raha hoon.",
+    "Life me itna sukoon chahiye jitna Sunday ko alarm band karne me milta hai.",
+    "Friend: Plan pakka hai na?\nMe knowing full well I will cancel last minute: Haan bhai bilkul!",
+    "WiFi ka network aur mera future, dono hi weak chal rahe hain.",
+    "Bas itna ameer hona hai ki bina price tag dekhe shopping kar saku.",
+    "Mood swings itne tez hain ki weather forecast bhi sharma jaye.",
+    "Me: Main kisi se attach nahi hounga.\nAlso me after 2 sweet messages: Shaadi ka card kis color ka hoga?",
+    "Online 24 ghante rehta hoon par text kisi ka nahi aata.",
+    "Zindagi me do hi cheezein pakki hain: Neend aana aur paise khatam hona.",
+]
+
+BADDIE_HOOKS = [
+    "Never lower your standards for someone who didn't even reach the bar.",
+    "They talked behind my back because they couldn't keep up with my front.",
+    "Too glam to give a damn, too focused to entertain clowns.",
+    "I'm not rude, I just have no appetite for fake vibes.",
+    "You were an option, I was a blessing. Know the difference.",
+    "Mirror mirror on the wall, I got up every time I had to fall.",
+    "Unbothered, moisturized, in my lane, well-hydrated and thriving.",
+    "I am the standard, not the alternative.",
+    "Apna attitude apne paas rakh, meri nazar me aane ke liye aukat chahiye.",
+    "Confidence isn't 'they will like me', it's 'I'll be fine even if they don't'.",
+    "Sweet as sugar, cold as ice. Hurt me once, I'll break you twice.",
+]
+
+BROKEN_HOOKS = [
+    "Dard tab nahi hota jab koi chhod ke jaye, dard tab hota hai jab koi umeed deke tod jaye.",
+    "Kuch baatein kehne ke liye lafz nahi, bas khamoshi kafi hoti hai.",
+    "Raat ke 2 baje wahi log yaad aate hain jo ab sirf yaadon me bache hain.",
+    "We went from talking every hour to strangers who know each other's deepest secrets.",
+    "Ek tarfa pyaar bhi ajeeb hota hai, khud hi tute aur khud hi sambhal gaye.",
+    "It hurts when you realize you were just a chapter in someone's book, while they were your whole story.",
+    "Log puchte hain itne chup kyu rehte ho? Ab unhe kaun bataye shor andar kitna hai.",
+    "Some goodbyes hurt not because they left, but because they never looked back.",
+    "Khush rehne ka dikhava karte karte, sach me muskurana bhool gaye.",
+]
+
+TRADITIONAL_HOOKS = [
+    "Unhe laga saree me masoom lagungi, ab unhe kaun samjhaye ki aag pallu me hai 🌚💋",
+    "Ek toh ye kali saree, upar se tumhari ye nigahein... aaj raat bachna mushkil hai 🌚💋",
+    "Jhumke ki chhan-chhan aur saree ka pallu, kisi ka dil churane ke liye kafi hai ✨🥻",
+    "Saree pehnu ya western, tera dhyan toh bas meri kamar pe hi rukna hai 🙈🔥",
+    "Authentic desi grace: Kajal in eyes, jhumka in ears, and chaos in his heart 🤍🥻",
+    "They told me to dress simple, so I wore a silk saree and broke all rules 🥻✨",
+    "Teri ek nazar kafi hai mere dil ka thermostat badhane ke liye 🔥🙈",
+    "Mera favourite outfit? Saree... aur tera favourite part? Uski dori 🙈🔥",
 ]
 
 ROMANTIC_HOOKS = [
@@ -133,6 +185,9 @@ ROMANTIC_HOOKS = [
     "Home isn't four walls anymore. It's the sound of your voice.",
     "I never believed in magic until you looked at me and the whole world stopped.",
     "With you, even silence feels like the deepest conversation.",
+    "Tum mil gaye toh aisa laga jaise bhatakti hui rooh ko apna thikana mil gaya.",
+    "Bas ek baar haath tham ke toh dekho, har mod par sath chalenge.",
+    "Teri muskurahat meri sabse badi kamzori bhi hai aur takat bhi.",
 ]
 
 QUOTE_HOOKS = [
@@ -160,7 +215,6 @@ def generate_viral_text(style: str = "sexy", custom_topic: Optional[str] = None)
     style_key = style.lower().strip()
 
     if style_key == "sexy":
-        # 50% chance pick a verified viral reference hook, 50% chance generate a fresh combination
         if random.random() < 0.45:
             return random.choice(REFERENCE_SEXY_SCRIPTS)
         else:
@@ -168,14 +222,23 @@ def generate_viral_text(style: str = "sexy", custom_topic: Optional[str] = None)
             body = random.choice(SEXY_BODIES)
             return f"{opener}\n{body}"
 
-    elif style_key == "cinematic":
-        return random.choice(CINEMATIC_HOOKS)
-
     elif style_key == "meme":
         return random.choice(MEME_HOOKS)
 
     elif style_key == "romantic":
         return random.choice(ROMANTIC_HOOKS)
+
+    elif style_key == "baddie":
+        return random.choice(BADDIE_HOOKS)
+
+    elif style_key == "broken":
+        return random.choice(BROKEN_HOOKS)
+
+    elif style_key == "traditional":
+        return random.choice(TRADITIONAL_HOOKS)
+
+    elif style_key == "cinematic":
+        return random.choice(CINEMATIC_HOOKS)
 
     elif style_key == "quote":
         return random.choice(QUOTE_HOOKS)

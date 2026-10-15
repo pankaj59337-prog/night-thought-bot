@@ -471,16 +471,17 @@ class LiveNewsService:
             "instagram_url": None,
         }
 
-        # Upload to Instagram if auto_post is enabled
+        # Upload to Instagram if auto_post is enabled (strictly routes to @aryafeed.in)
         if auto_post:
             ig_res = await instagram_service.upload_reel(
                 chat_id=chat_id,
                 video_path=Path(video_path),
                 caption=caption,
+                target_account="arya",
             )
             if ig_res.get("success"):
                 result["instagram_url"] = ig_res.get("url")
-                logger.info(f"[LiveNews] Reel successfully posted to Instagram: {result['instagram_url']}")
+                logger.info(f"[LiveNews] Reel successfully posted to Instagram @aryafeed.in: {result['instagram_url']}")
             else:
                 logger.warning(f"[LiveNews] Instagram upload error: {ig_res.get('error')}")
                 result["ig_error"] = ig_res.get("error")
@@ -488,6 +489,18 @@ class LiveNewsService:
         # Send Telegram notification if bot context provided
         if bot:
             try:
+                from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+                from bot.handlers.instagram_handler import register_pending_reel
+
+                reel_id = f"news_{timestamp}"
+                register_pending_reel(
+                    reel_id=reel_id,
+                    file_path=Path(video_path),
+                    title=raw_title[:60],
+                    caption=caption,
+                )
+
+                reply_markup = None
                 if result.get("instagram_url"):
                     alert_text = (
                         f"✅ *AryaFeed News — POSTED LIVE!*\n\n"
@@ -507,18 +520,26 @@ class LiveNewsService:
                         alert_text += "🔴 *Instagram session expired!* Use /insta\\_login to reconnect.\n"
                     else:
                         alert_text += f"⚠️ Upload failed: {error_msg}\n"
+                    reply_markup = InlineKeyboardMarkup([
+                        [InlineKeyboardButton("🚀 Publish to Instagram", callback_data=f"publish_reel:{reel_id}")]
+                    ])
                 else:
                     alert_text = (
                         f"⚡ *AryaFeed News Reel Ready!*\n\n"
                         f"📰 {headline}\n"
                         f"📌 {source}\n"
                     )
+                    reply_markup = InlineKeyboardMarkup([
+                        [InlineKeyboardButton("🚀 Publish to Instagram", callback_data=f"publish_reel:{reel_id}")]
+                    ])
 
                 with open(video_path, "rb") as vf:
                     await bot.send_video(
                         chat_id=chat_id,
                         video=vf,
                         caption=alert_text,
+                        reply_markup=reply_markup,
+                        supports_streaming=True,
                         parse_mode="Markdown",
                     )
             except Exception as e:

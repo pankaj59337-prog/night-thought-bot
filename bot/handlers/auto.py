@@ -29,8 +29,66 @@ from database.db import db_manager
 
 logger = logging.getLogger(__name__)
 
-# AryaFeed Engine Core Categories
+# Dual-Engine Categories: Night Thought (@night_thought_12) & AryaFeed (@aryafeed.in)
 CATEGORIES: Dict[str, Dict[str, Any]] = {
+    # --- Night Thought (@night_thought_12) Exclusives: Memes, Hot/Sexy & Aesthetic ---
+    "sexy": {
+        "id": "sexy",
+        "title": "Hot & Sexy Saree / Late Night 🔥",
+        "icon": "🔥",
+        "desc": "Sultry, bold & spicy late night desi aesthetic",
+        "style": "sexy",
+    },
+    "meme": {
+        "id": "meme",
+        "title": "Relatable Memes & Savage Humor 😂",
+        "icon": "😂",
+        "desc": "Funny, relatable Indian memes & witty banter",
+        "style": "meme",
+    },
+    "romantic": {
+        "id": "romantic",
+        "title": "Desi Romance & 2 AM Thoughts 💖",
+        "icon": "💖",
+        "desc": "Deep love, passionate thoughts & poetic lines",
+        "style": "romantic",
+    },
+    "baddie": {
+        "id": "baddie",
+        "title": "Baddie Vibes & Attitude 💅",
+        "icon": "💅",
+        "desc": "Unbothered confidence, boss babe & savage quotes",
+        "style": "baddie",
+    },
+    "broken": {
+        "id": "broken",
+        "title": "Late Night Broken & Dard 🥀",
+        "icon": "🥀",
+        "desc": "Silent pain, heartbreak feelings & moody vibes",
+        "style": "broken",
+    },
+    "cinematic": {
+        "id": "cinematic",
+        "title": "Midnight Cinematic & Reflections 🌙",
+        "icon": "🌙",
+        "desc": "Moody visual poetry & retro Delhi/Mumbai nights",
+        "style": "cinematic",
+    },
+    "traditional": {
+        "id": "traditional",
+        "title": "Desi Elegance & Saree Grace 🥻",
+        "icon": "🥻",
+        "desc": "Authentic Indian grace, jhumkas & ethnic charm",
+        "style": "traditional",
+    },
+    "aesthetic": {
+        "id": "aesthetic",
+        "title": "Soft Aesthetic & Peace 🌿",
+        "icon": "🌿",
+        "desc": "Slow living, calm mind & soft visual warmth",
+        "style": "aesthetic",
+    },
+    # --- AryaFeed (@aryafeed.in) Exclusives: Breaking News & Current Affairs ---
     "news": {
         "id": "news",
         "title": "AryaFeed News ⚡",
@@ -775,10 +833,18 @@ async def complete_custom_reel_flow(update: Update, context: ContextTypes.DEFAUL
 # -------------------------------------------------------------
 
 def get_random_category_image(cat_id: str, chat_id: int, used_names_override: Optional[set] = None) -> Path:
-    """Pick a random unused image for AryaFeed news."""
-    cat_dir = Path("assets/images/categories/news")
-    used_dir = Path("assets/images/used")
+    """Pick a random unused image for the requested category, strictly respecting category routing."""
+    cat_clean = (cat_id or "news").lower().strip()
+    cat_dir = Path(f"assets/images/categories/{cat_clean}")
 
+    # Fallback paths if specific subfolder does not exist
+    if not cat_dir.exists():
+        if cat_clean in ("sexy", "baddie", "romantic", "broken", "cinematic", "traditional", "aesthetic", "meme"):
+            cat_dir = Path("assets/images/categories/sexy")
+        else:
+            cat_dir = Path("assets/images/categories/news")
+
+    used_dir = Path("assets/images/used")
     used_names = set(used_names_override) if used_names_override else set()
     if used_dir.exists():
         for f in used_dir.iterdir():
@@ -791,7 +857,8 @@ def get_random_category_image(cat_id: str, chat_id: int, used_names_override: Op
         available = files
 
     if not available:
-        return Path("assets/images/categories/news/10.jpg")
+        fallback = Path("assets/images/categories/sexy/1.jpg") if cat_clean in ("sexy", "baddie", "romantic", "broken", "cinematic", "traditional", "aesthetic", "meme") else Path("assets/images/categories/news/10.jpg")
+        return fallback
 
     return random.choice(available)
 

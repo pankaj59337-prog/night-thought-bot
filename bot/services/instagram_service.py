@@ -203,31 +203,43 @@ class InstagramService:
         # Fallback to main client
         return await self.get_authenticated_client(chat_id)
 
-    async def get_authenticated_client(self, chat_id: int) -> Optional[Client]:
-        """Retrieve instagrapi Client with active session."""
+    async def get_authenticated_client(self, chat_id: int, target_account: Optional[str] = None) -> Optional[Client]:
+        """Retrieve instagrapi Client with active session for active or target account."""
         session_path = self._get_session_path(chat_id)
-        acc = await db_manager.get_instagram_account(chat_id)
-        if acc:
+        if target_account:
+            acc = await db_manager.get_managed_account_by_alias(chat_id, target_account)
+        else:
+            acc = await db_manager.get_instagram_account(chat_id)
+
+        if acc and acc.get("session_file"):
             session_path = Path(acc["session_file"])
 
         if not session_path.exists():
-            return None
+            default_session = self._get_session_path(chat_id)
+            if default_session.exists():
+                session_path = default_session
+            else:
+                return None
 
         cl = self._create_client()
         try:
             cl.load_settings(session_path)
             return cl
         except Exception as e:
-            logger.warning(f"Could not load Instagram session for {chat_id}: {e}")
+            logger.warning(f"Could not load Instagram session for {chat_id} (target: {target_account}): {e}")
             return None
 
     # Alias for convenience
     get_client = get_authenticated_client
 
-    async def get_graph_credentials(self, chat_id: int) -> Optional[Dict[str, str]]:
-        """Check for official Graph API account ID and access token for the active account."""
+    async def get_graph_credentials(self, chat_id: int, target_account: Optional[str] = None) -> Optional[Dict[str, str]]:
+        """Check for official Graph API account ID and access token for the active or target account."""
         import os
-        active = await db_manager.get_active_account(chat_id)
+        if target_account:
+            active = await db_manager.get_managed_account_by_alias(chat_id, target_account)
+        else:
+            active = await db_manager.get_active_account(chat_id)
+
         if active and active.get("graph_account_id") and active.get("graph_token"):
             return {
                 "account_id": active["graph_account_id"].strip(),
@@ -250,7 +262,7 @@ class InstagramService:
             return {
                 "account_id": acct_id.strip(),
                 "access_token": token.strip(),
-                "username": username or (active.get("username") if active else "aryafeed.in"),
+                "username": username or (active.get("username") if active else "night_thought_12"),
             }
         return None
 
@@ -267,11 +279,11 @@ class InstagramService:
         graph_creds = await self.get_graph_credentials(chat_id)
         if graph_creds:
             return {
-                "username": graph_creds.get("username", active.get("username", "aryafeed.in") if active else "aryafeed.in"),
+                "username": graph_creds.get("username", active.get("username", "night_thought_12") if active else "night_thought_12"),
                 "account_id": graph_creds.get("account_id"),
                 "type": "meta_graph_api",
-                "alias": active.get("alias", "aryafeed") if active else "aryafeed",
-                "engine_type": active.get("engine_type", "aryafeed") if active else "aryafeed",
+                "alias": active.get("alias", "night") if active else "night",
+                "engine_type": active.get("engine_type", "aesthetic") if active else "aesthetic",
                 "auto_post": active.get("auto_post", 1) if active else 1,
             }
         if active:
@@ -283,14 +295,14 @@ class InstagramService:
         session_path = self._get_session_path(chat_id)
         if session_path.exists():
             try:
-                username = "aryafeed.in"
+                username = "night_thought_12"
                 await db_manager.save_managed_account(
                     chat_id=chat_id,
-                    alias="aryafeed",
+                    alias="night",
                     username=username,
                     session_file=str(session_path),
                     auto_post=1,
-                    engine_type="aryafeed",
+                    engine_type="aesthetic",
                     set_active=True,
                 )
                 logger.info(f"[InstagramService] Auto-recovered active session for @{username} (chat {chat_id})")
@@ -300,7 +312,7 @@ class InstagramService:
         return None
 
     async def switch_account(self, chat_id: int, target: str) -> Optional[Dict[str, Any]]:
-        """Switch active account between Engine 1 (@night_thought_12) and Engine 2 (@aryafeed.in)."""
+        """Switch active account."""
         return await db_manager.switch_active_account(chat_id, target)
 
     async def list_accounts(self, chat_id: int) -> List[Dict[str, Any]]:
@@ -337,17 +349,49 @@ class InstagramService:
         self,
         chat_id: int,
         video_path: Path,
-        caption: str = ""
+        caption: str = "",
+        target_account: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Upload a 1080x1920 MP4 reel directly to user's Instagram feed/reels."""
+        """Upload a 1080x1920 MP4 reel directly to user's Instagram feed/reels with strict account routing."""
         if not video_path.exists():
             return {"success": False, "error": f"Video file not found: {video_path}"}
 
+        # Resolve target account
+        acc = None
+        if target_account:
+            acc = await db_manager.get_managed_account_by_alias(chat_id, target_account)
+        if not acc:
+            acc = await db_manager.get_active_account(chat_id)
+
+        target_alias = (acc.get("alias") or "").lower() if acc else (target_account or "").lower()
+        target_user = (acc.get("username") or "").lower() if acc else ""
+
+        # CONTENT ROUTING ENFORCEMENT GUARD:
+        # On Night Thought (@night_thought_12), ONLY meme/hot sexy/aesthetic/romantic reels can be posted, NEVER news!
+        is_news_content = False
+        lower_cap = (caption or "").lower()
+        lower_name = video_path.name.lower()
+        news_indicators = [
+            "aryafeed", "[per ", "news_banner", "news_card", "#breakingnews", "#indianews",
+            "currentaffairs", "upsc", "cji", "cjp", "protest", "hc sop", "delhi police",
+            "flight detention", "jnu complaint", "breaking news"
+        ]
+        if any(ind in lower_cap for ind in news_indicators) or any(ind in lower_name for ind in ["news", "cjp", "hc_sop", "protest", "flight_detention"]):
+            is_news_content = True
+
+        if target_alias == "night" or "night_thought" in target_user:
+            if is_news_content:
+                logger.error(f"[InstagramService] BLOCKED: Attempted to post news reel to @{target_user} (night_thought_12).")
+                return {
+                    "success": False,
+                    "error": "STRICT POLICY GUARD: News content is prohibited on @night_thought_12! Only meme / hot sexy / aesthetic / romantic reels are allowed on Night Thought."
+                }
+
         # 1. First priority: Official Meta Graph API (Zero Ban Risk)
         from bot.services.graph_api_service import graph_api_service
-        graph_creds = await self.get_graph_credentials(chat_id)
+        graph_creds = await self.get_graph_credentials(chat_id, target_account=target_account)
         if graph_creds:
-            logger.info(f"[InstagramService] Publishing via official Meta Graph API (Account: {graph_creds['account_id']})")
+            logger.info(f"[InstagramService] Publishing via official Meta Graph API (Account: {graph_creds['account_id']}, Target: {target_user})")
             graph_res = await graph_api_service.publish_reel(
                 video_path=video_path,
                 caption=caption,
@@ -359,11 +403,11 @@ class InstagramService:
             logger.warning(f"[InstagramService] Meta Graph API returned error: {graph_res.get('error')}. Falling back to instagrapi...")
 
         # 2. Second priority: Fallback to instagrapi session
-        cl = await self.get_authenticated_client(chat_id)
+        cl = await self.get_authenticated_client(chat_id, target_account=target_account)
         if not cl:
             return {
                 "success": False,
-                "error": "Instagram account not connected. Use `/insta_graph account_id access_token` or `/insta_login`."
+                "error": f"Instagram account (@{target_user or target_account or 'default'}) not connected. Use `/insta_graph` or `/insta_login`."
             }
 
         # Generate custom thumbnail at 2.0s using FFmpeg to avoid MoviePy thumbnailer
@@ -389,7 +433,7 @@ class InstagramService:
 
         def _do_upload():
             try:
-                logger.info(f"Uploading clip {video_path} to Instagram...")
+                logger.info(f"Uploading clip {video_path} to Instagram (@{target_user or 'active'})...")
                 media = cl.clip_upload(
                     path=str(video_path),
                     caption=caption,
@@ -402,10 +446,11 @@ class InstagramService:
                     "success": True,
                     "media_id": media_id,
                     "code": media_code,
-                    "url": post_url
+                    "url": post_url,
+                    "username": target_user or getattr(cl, "username", ""),
                 }
             except LoginRequired:
-                return {"success": False, "error": "Instagram session expired. Please re-login with /insta_login."}
+                return {"success": False, "error": f"Instagram session for @{target_user or 'active'} expired. Please re-login with /insta_login or /insta_session."}
             except Exception as e:
                 logger.exception(f"Failed to upload reel to Instagram: {e}")
                 return {"success": False, "error": str(e)}
@@ -416,22 +461,53 @@ class InstagramService:
         self,
         chat_id: int,
         photo_path: Path,
-        caption: str = ""
+        caption: str = "",
+        target_account: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Upload a photo / meme card directly to user's Instagram feed."""
+        """Upload a photo / meme card directly to user's Instagram feed with strict account routing."""
         if not photo_path.exists():
             return {"success": False, "error": f"Photo file not found: {photo_path}"}
 
-        cl = await self.get_authenticated_client(chat_id)
+        # Resolve target account
+        acc = None
+        if target_account:
+            acc = await db_manager.get_managed_account_by_alias(chat_id, target_account)
+        if not acc:
+            acc = await db_manager.get_active_account(chat_id)
+
+        target_alias = (acc.get("alias") or "").lower() if acc else (target_account or "").lower()
+        target_user = (acc.get("username") or "").lower() if acc else ""
+
+        # CONTENT ROUTING ENFORCEMENT GUARD:
+        is_news_content = False
+        lower_cap = (caption or "").lower()
+        lower_name = photo_path.name.lower()
+        news_indicators = [
+            "aryafeed", "[per ", "news_banner", "news_card", "#breakingnews", "#indianews",
+            "currentaffairs", "upsc", "cji", "cjp", "protest", "hc sop", "delhi police",
+            "flight detention", "jnu complaint", "breaking news"
+        ]
+        if any(ind in lower_cap for ind in news_indicators) or any(ind in lower_name for ind in ["news", "cjp", "hc_sop", "protest", "flight_detention"]):
+            is_news_content = True
+
+        if target_alias == "night" or "night_thought" in target_user:
+            if is_news_content:
+                logger.error(f"[InstagramService] BLOCKED: Attempted to post news photo/card to @{target_user} (night_thought_12).")
+                return {
+                    "success": False,
+                    "error": "STRICT POLICY GUARD: News content is prohibited on @night_thought_12! Only meme / hot sexy / aesthetic / romantic content is allowed on Night Thought."
+                }
+
+        cl = await self.get_authenticated_client(chat_id, target_account=target_account)
         if not cl:
             return {
                 "success": False,
-                "error": "Instagram account not connected. Use `/insta_login` to connect."
+                "error": f"Instagram account (@{target_user or target_account or 'default'}) not connected. Use `/insta_login` to connect."
             }
 
         def _do_upload():
             try:
-                logger.info(f"Uploading photo {photo_path} to Instagram...")
+                logger.info(f"Uploading photo {photo_path} to Instagram (@{target_user or 'active'})...")
                 media = cl.photo_upload(
                     path=str(photo_path),
                     caption=caption,
@@ -443,10 +519,11 @@ class InstagramService:
                     "success": True,
                     "media_id": media_id,
                     "code": media_code,
-                    "url": post_url
+                    "url": post_url,
+                    "username": target_user or getattr(cl, "username", ""),
                 }
             except LoginRequired:
-                return {"success": False, "error": "Instagram session expired. Please re-login with /insta_login."}
+                return {"success": False, "error": f"Instagram session for @{target_user or 'active'} expired. Please re-login with /insta_login."}
             except Exception as e:
                 logger.exception(f"Failed to upload photo to Instagram: {e}")
                 return {"success": False, "error": str(e)}

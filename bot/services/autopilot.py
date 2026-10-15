@@ -141,14 +141,14 @@ def generate_viral_ig_caption(category: str, hook_text: str) -> str:
     return f"{hook_text}\n.\n{cta}\n.\n{tag_str}"
 
 
-# 2 High-Impact Daily Viral Slots (Spaced to maximize reach and avoid shadowban)
+# 2 High-Impact Daily Viral Slots for @night_thought_12 (Memes, Hot/Sexy, Aesthetic)
 DAILY_SLOTS = [
     {
         "name": "slot_afternoon_lunch",
-        "categories": ["romantic", "traditional", "aesthetic", "bestie"],
-        "category": "romantic",
-        "title": "Daytime Aesthetic & Desi Romance",
-        "icon": "💖",
+        "categories": ["meme", "romantic", "traditional", "aesthetic", "bestie"],
+        "category": "meme",
+        "title": "Daytime Relatable Memes & Desi Romance",
+        "icon": "😂",
         "delivery_time_str": "01:20 PM IST",
         "target_post_time_str": "01:30 PM IST",
         "hour": 13,
@@ -156,10 +156,10 @@ DAILY_SLOTS = [
     },
     {
         "name": "slot_prime_night",
-        "categories": ["cinematic", "sexy", "broken", "baddie"],
+        "categories": ["sexy", "baddie", "broken", "cinematic"],
         "category": "sexy",
-        "title": "Prime Night / Flirty & Cinematic",
-        "icon": "🌙",
+        "title": "Prime Night / Hot & Sultry Late Night Vibes",
+        "icon": "🔥",
         "delivery_time_str": "09:20 PM IST",
         "target_post_time_str": "09:30 PM IST",
         "hour": 21,
@@ -223,13 +223,16 @@ def get_pure_vocal_lyrics_track(category: str, exclude_ids: Optional[set] = None
 
     if lyrics_only:
         chosen = random.choice(lyrics_only)
-        return {
-            "id": chosen.get("id", ""),
-            "path": chosen["path"],
-            "title": chosen["title"],
-            "artist": chosen.get("artist", "Bollywood Vocal"),
-            "lyrics": chosen.get("lyrics", ""),
-        }
+        track_p = music_service.get_vocal_track_by_id(chosen.get("id", "")) or chosen.get("path")
+        if track_p and Path(track_p).exists():
+            return {
+                "id": chosen.get("id", ""),
+                "path": Path(track_p),
+                "title": chosen["title"],
+                "artist": chosen.get("artist", "Bollywood Vocal"),
+                "lyrics": chosen.get("lyrics", ""),
+            }
+
     fallback_p = music_service.get_bollywood_track(category)
     return {
         "id": "fallback",
@@ -276,9 +279,14 @@ async def auto_post_after_10min_callback(context: ContextTypes.DEFAULT_TYPE) -> 
         )
         return
 
-    # Post to Instagram
-    logger.info(f"[AutoPilot] Publishing reel to Instagram for chat {chat_id}...")
-    result = await instagram_service.upload_reel(chat_id=chat_id, video_path=video_path, caption=caption)
+    # Post to Instagram strictly to @night_thought_12
+    logger.info(f"[AutoPilot] Publishing reel to Instagram for chat {chat_id} (strictly targeting @night_thought_12)...")
+    result = await instagram_service.upload_reel(
+        chat_id=chat_id,
+        video_path=video_path,
+        caption=caption,
+        target_account="night",
+    )
 
     if result.get("success"):
         item["status"] = "posted"
@@ -286,9 +294,9 @@ async def auto_post_after_10min_callback(context: ContextTypes.DEFAULT_TYPE) -> 
         await context.bot.send_message(
             chat_id=chat_id,
             text=(
-                f"🚀 *Auto-Posted to Instagram Successfully!*\n\n"
+                f"🚀 *Auto-Posted to @night_thought_12 Successfully!*\n\n"
                 f"10 minutes elapsed without cancellation, so your reel was published live for the scheduled slot (*{target_time_str}*)! 🎉\n\n"
-                f"• Account: @{acc.get('username')}\n"
+                f"• Account: @night_thought_12\n"
                 f"• Media ID: `{media_id}`"
             ),
             parse_mode="Markdown",
@@ -316,7 +324,17 @@ async def generate_and_deliver_scheduled_reel(
     job_queue=None,
 ) -> None:
     """Automated pipeline: picks unused photo, pure lyrics audio, renders, and arms 10-min auto-post timer."""
-    from bot.handlers.auto import get_random_category_image, get_category_info, ALL_HOOK_OPTIONS
+    from bot.handlers.auto import get_random_category_image, get_category_info
+    from bot.services.ai_text_engine import (
+        REFERENCE_SEXY_SCRIPTS,
+        MEME_HOOKS,
+        ROMANTIC_HOOKS,
+        BADDIE_HOOKS,
+        BROKEN_HOOKS,
+        TRADITIONAL_HOOKS,
+        CINEMATIC_HOOKS,
+        MINIMAL_HOOKS,
+    )
 
     cat_info = get_category_info(category)
 
@@ -325,14 +343,23 @@ async def generate_and_deliver_scheduled_reel(
     used_quotes = await db_manager.get_used_assets(chat_id, "text")
     used_music = await db_manager.get_used_assets(chat_id, "music")
 
-    # 2. Pick unused image from category pool
+    # 2. Pick unused image from category pool (strictly meme, hot/sexy, aesthetic, etc.)
     image_path = get_random_category_image(category, chat_id, used_names_override=used_images)
 
-    # 3. Pick matching hook without repeating
-    cat_hooks = [h["text"] for h in ALL_HOOK_OPTIONS if category in h.get("categories", [])]
-    if not cat_hooks:
-        cat_hooks = [h["text"] for h in ALL_HOOK_OPTIONS]
+    # 3. Pick matching hook strictly from Night Thought pools (strictly zero news)
+    HOOK_POOLS = {
+        "sexy": REFERENCE_SEXY_SCRIPTS,
+        "meme": MEME_HOOKS,
+        "romantic": ROMANTIC_HOOKS,
+        "baddie": BADDIE_HOOKS,
+        "broken": BROKEN_HOOKS,
+        "traditional": TRADITIONAL_HOOKS,
+        "cinematic": CINEMATIC_HOOKS,
+        "aesthetic": MINIMAL_HOOKS,
+        "bestie": MEME_HOOKS,
+    }
 
+    cat_hooks = HOOK_POOLS.get(category.lower(), REFERENCE_SEXY_SCRIPTS)
     unused_hooks = [t for t in cat_hooks if t not in used_quotes]
     if not unused_hooks:
         logger.info(f"[AutoPilot] All {len(cat_hooks)} hooks used for '{category}'. Clearing used quote history.")
@@ -714,11 +741,12 @@ async def handle_autopilot_callbacks(update: Update, context: ContextTypes.DEFAU
                 chat_id=chat_id,
                 video_path=Path(item["video_path"]),
                 caption=item["caption"],
+                target_account="night",
             )
             if res.get("success"):
                 item["status"] = "posted"
                 await query.message.reply_text(
-                    f"🎉 *Published to Instagram Successfully!*\nReel is live on @{acc.get('username')}! 🚀",
+                    f"🎉 *Published to @night_thought_12 Successfully!*\nReel is live on @night_thought_12! 🚀",
                     parse_mode="Markdown",
                 )
             else:

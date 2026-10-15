@@ -1,5 +1,4 @@
 @echo off
+set "PATH=D:\tools\ffmpeg\bin;%LOCALAPPDATA%\Programs\Python\Python312;%PATH%"
 cd /d "D:\aryafeed bot"
-"C:\Python314\pythonw.exe" main.py
-
-
+"%LOCALAPPDATA%\Programs\Python\Python312\pythonw.exe" main.py

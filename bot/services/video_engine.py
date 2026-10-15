@@ -38,63 +38,38 @@ def run_ffmpeg_command(cmd: list) -> None:
 
 
 def prepare_base_image(image_path: Path, output_path: Path) -> Path:
-    """Prepare a crisp 1080x1920 base canvas using Pillow (instant, <10MB RAM)."""
-    from PIL import Image, ImageFilter, ImageDraw
+    """Prepare a crisp full-bleed 1080x1920 base canvas with zero blur (full image cover)."""
+    from PIL import Image, ImageDraw
     cw, ch = 1080, 1920
     with Image.open(image_path) as raw:
         raw = raw.convert("RGBA")
         iw, ih = raw.size
-        aspect_img = iw / ih
 
-        # Background: blurred and darkened atmospheric version
-        bg = raw.resize((cw // 4, ch // 4), Image.Resampling.BOX)
-        bg = bg.filter(ImageFilter.GaussianBlur(12))
-        bg = bg.resize((cw, ch), Image.Resampling.BILINEAR)
-        dark_tint = Image.new("RGBA", (cw, ch), (8, 8, 12, 190))
-        bg = Image.alpha_composite(bg, dark_tint)
+        # Full-bleed cover: scale to completely fill 1080x1920 without black bars or blur
+        scale = max(cw / iw, ch / ih)
+        target_w = max(1, int(iw * scale))
+        target_h = max(1, int(ih * scale))
+        scaled = raw.resize((target_w, target_h), Image.Resampling.LANCZOS)
 
-        if aspect_img > 1.15:  # Landscape editorial news photo (e.g. 16:9, 4:3)
-            # Scale to fit width 1080
-            target_w = cw
-            target_h = int(ih * (target_w / iw))
-            photo_y = 150
-            if target_h > 1000:
-                target_h = 1000
-                target_w = int(iw * (target_h / ih))
-                photo_x = (cw - target_w) // 2
-            else:
-                photo_x = 0
+        # Center crop to 1080x1920
+        crop_x = (target_w - cw) // 2
+        crop_y = (target_h - ch) // 2
+        bg = scaled.crop((crop_x, crop_y, crop_x + cw, crop_y + ch))
 
-            fg = raw.resize((target_w, target_h), Image.Resampling.LANCZOS)
-
-            # Smooth bottom fade mask so photo blends organically into dark lower canvas
-            fade_h = int(target_h * 0.25)
-            mask = Image.new("L", (target_w, target_h), 255)
-            mdraw = ImageDraw.Draw(mask)
-            for y in range(target_h - fade_h, target_h):
-                val = int(255 * (1.0 - (y - (target_h - fade_h)) / fade_h))
-                mdraw.line([(0, y), (target_w, y)], fill=val)
-            fg.putalpha(mask)
-            bg.paste(fg, (photo_x, photo_y), fg)
-
-            # Deep dark gradient in lower portion for crystal clear text readability
-            grad = Image.new("RGBA", (cw, ch), (0, 0, 0, 0))
-            gdraw = ImageDraw.Draw(grad)
-            start_grad = photo_y + target_h - fade_h
-            for y in range(start_grad, ch):
-                f = min(1.0, (y - start_grad) / max(1, ch - start_grad))
-                gdraw.line([(0, y), (cw, y)], fill=(8, 8, 12, int(230 * f)))
-            bg = Image.alpha_composite(bg, grad)
-        else:
-            # Portrait or square: center fit
-            scale = min(cw / iw, ch / ih)
-            new_w, new_h = max(1, int(iw * scale)), max(1, int(ih * scale))
-            fg = raw.resize((new_w, new_h), Image.Resampling.LANCZOS)
-            bg.paste(fg, ((cw - new_w) // 2, (ch - new_h) // 2))
+        # Soft dark gradient on lower portion so text directly on image is crystal clear
+        grad = Image.new("RGBA", (cw, ch), (0, 0, 0, 0))
+        gdraw = ImageDraw.Draw(grad)
+        start_grad = int(ch * 0.45)  # Start gradual darkening from 45% down
+        for y in range(start_grad, ch):
+            f = min(1.0, (y - start_grad) / max(1, ch - start_grad))
+            alpha = int(185 * (f ** 1.3))
+            gdraw.line([(0, y), (cw, y)], fill=(8, 8, 12, alpha))
+        bg = Image.alpha_composite(bg, grad)
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
         bg.convert("RGB").save(output_path, "JPEG", quality=95)
     return output_path
+
 
 
 def render_single_pass_image_reel(
@@ -449,9 +424,9 @@ def render_complete_reel(
 def stamp_image_watermark(
     input_path: Path,
     output_path: Path,
-    brand: str = "ARYAFEED",
+    brand: str = "@night_thought_12",
 ) -> Path:
-    """Stamp signature [ ARYAFEED ] yellow pill watermark at bottom-right of an image.
+    """Stamp signature @night_thought_12 watermark at bottom-right of an image.
     Preserves original aspect ratio and resolution (meme cards, photos, infographics).
     """
     from PIL import Image, ImageDraw
@@ -462,44 +437,34 @@ def stamp_image_watermark(
             im = im.convert("RGB")
         w, h = im.size
 
-        # Dynamically scale font & pill proportional to image width
+        # Dynamically scale font proportional to image width
         scale = max(0.5, min(2.5, w / 1080.0))
-        badge_font_size = int(32 * scale)
-        badge_font = load_font(config.font_path, badge_font_size)
+        badge_font_size = int(30 * scale)
+        try:
+            badge_font = ImageFont.truetype("C:/Windows/Fonts/ariblk.ttf", badge_font_size)
+        except Exception:
+            badge_font = load_font(config.font_path, badge_font_size)
 
         draw = ImageDraw.Draw(im)
-        badge_text = brand.upper().strip()
-        bbox = draw.textbbox((0, 0), badge_text, font=badge_font)
-        tw = bbox[2] - bbox[0]
-        th = bbox[3] - bbox[1]
+        display_brand = "@night_thought_12" if (not brand or brand in ("ARYAFEED", "NIGHT THOUGHT", "@night_thought_12")) else brand
+        bbox = draw.textbbox((0, 0), display_brand, font=badge_font)
+        tot_w = bbox[2] - bbox[0]
+        tot_h = bbox[3] - bbox[1]
 
-        pad_x = int(22 * scale)
-        pad_y = int(9 * scale)
-        badge_w = tw + (pad_x * 2)
-        badge_h = th + (pad_y * 2)
-        radius = int(12 * scale)
+        margin_right = int(36 * scale)
+        margin_bottom = int(36 * scale)
+        badge_x = w - margin_right - tot_w
+        badge_y = h - margin_bottom - tot_h
 
-        margin_right = int(32 * scale)
-        margin_bottom = int(32 * scale)
-        badge_x = w - margin_right - badge_w
-        badge_y = h - margin_bottom - badge_h
+        shadow_color = (15, 25, 35)
+        white_color = (255, 255, 255)
 
-        # 1. Soft shadow
-        draw.rounded_rectangle(
-            (badge_x - 1, badge_y + 2, badge_x + badge_w + 1, badge_y + badge_h + 3),
-            radius=radius,
-            fill=(0, 0, 0, 160),
-        )
-        # 2. Signature yellow pill (255, 220, 0)
-        draw.rounded_rectangle(
-            (badge_x, badge_y, badge_x + badge_w, badge_y + badge_h),
-            radius=radius,
-            fill=(255, 220, 0),
-        )
-        # 3. High-contrast bold black text
-        text_x = badge_x + pad_x - bbox[0]
-        text_y = badge_y + pad_y - bbox[1]
-        draw.text((text_x, text_y), badge_text, font=badge_font, fill=(10, 10, 10))
+        # 1. Soft atmospheric drop shadow
+        for dx, dy in [(1, 1), (2, 2)]:
+            draw.text((badge_x + dx, badge_y + dy), display_brand, font=badge_font, fill=shadow_color)
+
+        # 2. Sleek signature watermark
+        draw.text((badge_x, badge_y), display_brand, font=badge_font, fill=white_color)
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
         im.save(output_path, "JPEG", quality=95)
@@ -509,9 +474,9 @@ def stamp_image_watermark(
 def stamp_video_watermark(
     video_path: Path,
     output_path: Path,
-    brand: str = "ARYAFEED",
+    brand: str = "@night_thought_12",
 ) -> Path:
-    """Stamp signature [ ARYAFEED ] yellow pill watermark at bottom-right of a video.
+    """Stamp signature @night_thought_12 watermark at bottom-right of a video.
     Encodes ultrafast with libx264 while copying audio stream directly.
     """
     import json
@@ -535,42 +500,34 @@ def stamp_video_watermark(
         width, height = 1080, 1920
 
     scale = max(0.5, min(2.5, width / 1080.0))
-    badge_font_size = int(32 * scale)
-    badge_font = load_font(config.font_path, badge_font_size)
+    badge_font_size = int(30 * scale)
+    try:
+        badge_font = ImageFont.truetype("C:/Windows/Fonts/ariblk.ttf", badge_font_size)
+    except Exception:
+        badge_font = load_font(config.font_path, badge_font_size)
 
     overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
 
-    badge_text = brand.upper().strip()
-    bbox = draw.textbbox((0, 0), badge_text, font=badge_font)
-    tw = bbox[2] - bbox[0]
-    th = bbox[3] - bbox[1]
+    display_brand = "@night_thought_12" if (not brand or brand in ("ARYAFEED", "NIGHT THOUGHT", "@night_thought_12")) else brand
+    bbox = draw.textbbox((0, 0), display_brand, font=badge_font)
+    tot_w = bbox[2] - bbox[0]
+    tot_h = bbox[3] - bbox[1]
 
-    pad_x = int(22 * scale)
-    pad_y = int(9 * scale)
-    badge_w = tw + (pad_x * 2)
-    badge_h = th + (pad_y * 2)
-    radius = int(12 * scale)
-
-    # Positioned above bottom Instagram UI (~140px on 1920h)
     margin_right = int(36 * scale)
     margin_bottom = int(140 * scale) if height > width else int(36 * scale)
-    badge_x = width - margin_right - badge_w
-    badge_y = height - margin_bottom - badge_h
+    badge_x = width - margin_right - tot_w
+    badge_y = height - margin_bottom - tot_h
 
-    draw.rounded_rectangle(
-        (badge_x - 1, badge_y + 2, badge_x + badge_w + 1, badge_y + badge_h + 3),
-        radius=radius,
-        fill=(0, 0, 0, 160),
-    )
-    draw.rounded_rectangle(
-        (badge_x, badge_y, badge_x + badge_w, badge_y + badge_h),
-        radius=radius,
-        fill=(255, 220, 0, 255),
-    )
-    text_x = badge_x + pad_x - bbox[0]
-    text_y = badge_y + pad_y - bbox[1]
-    draw.text((text_x, text_y), badge_text, font=badge_font, fill=(10, 10, 10, 255))
+    shadow_color = (15, 25, 35, 230)
+    white_color = (255, 255, 255, 255)
+
+    # 1. Soft atmospheric drop shadow
+    for dx, dy in [(1, 1), (2, 2)]:
+        draw.text((badge_x + dx, badge_y + dy), display_brand, font=badge_font, fill=shadow_color)
+
+    # 2. Sleek signature watermark
+    draw.text((badge_x, badge_y), display_brand, font=badge_font, fill=white_color)
 
     overlay_path = output_path.parent / f"{output_path.stem}_watermark.png"
     overlay.save(overlay_path, "PNG")

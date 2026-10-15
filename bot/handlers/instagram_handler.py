@@ -336,21 +336,108 @@ async def insta_logout_command(update: Update, context: ContextTypes.DEFAULT_TYP
     )
 
 
+PUBLISH_QUEUE_LOCK = None
+PUBLISH_LOG_PATH = Path("data/reels_publish_log.json")
+PENDING_REGISTRY_PATH = Path("data/pending_reels_registry.json")
+
+
+def register_pending_reel(reel_id: str, file_path: Path, title: str, caption: str) -> None:
+    """Register a generated reel preview so clicking [Publish to Instagram] knows its exact file and caption."""
+    import json
+    PENDING_REGISTRY_PATH.parent.mkdir(parents=True, exist_ok=True)
+    registry = {}
+    if PENDING_REGISTRY_PATH.exists():
+        try:
+            with open(PENDING_REGISTRY_PATH, "r", encoding="utf-8") as f:
+                registry = json.load(f)
+        except Exception:
+            registry = {}
+    registry[reel_id] = {
+        "id": reel_id,
+        "file": str(file_path),
+        "title": title,
+        "caption": caption,
+    }
+    with open(PENDING_REGISTRY_PATH, "w", encoding="utf-8") as f:
+        json.dump(registry, f, indent=2)
+
+
+def _load_publish_log() -> dict:
+    import json
+    if PUBLISH_LOG_PATH.exists():
+        try:
+            with open(PUBLISH_LOG_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+
+def _save_publish_log(data: dict) -> None:
+    import json
+    PUBLISH_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with open(PUBLISH_LOG_PATH, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+
+
 async def handle_post_to_insta_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle inline button callback: post_insta or publish_reel."""
+    """Handle inline button callback: post_insta or publish_reel[:<reel_id>] with 10-min rate protection."""
+    import asyncio
+    import json
+    from datetime import datetime
+
+    global PUBLISH_QUEUE_LOCK
+    if PUBLISH_QUEUE_LOCK is None:
+        PUBLISH_QUEUE_LOCK = asyncio.Lock()
+
     query = update.callback_query
     await query.answer()
 
     chat_id = update.effective_chat.id
-    session = await db_manager.get_session(chat_id)
+    data = query.data or ""
+    reel_id = None
+    if ":" in data:
+        _, reel_id = data.split(":", 1)
+        reel_id = reel_id.strip()
 
-    media_file: Optional[Path] = None
-    if session and session.get("output_path"):
+    # Check if already published in reels_publish_log.json
+    pub_log = _load_publish_log()
+    if reel_id and reel_id in pub_log and pub_log[reel_id].get("success"):
+        existing_url = pub_log[reel_id].get("url", "https://www.instagram.com/aryafeed.in/")
+        await query.edit_message_reply_markup(reply_markup=None)
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=f"✅ *Already Published on @aryafeed.in!*\n🔗 [Watch on Instagram]({existing_url})",
+            parse_mode="Markdown",
+        )
+        return
+
+    session = await db_manager.get_session(chat_id)
+    media_file = None
+    caption = None
+    title_label = None
+
+    # 1. Check pending reels registry if reel_id is provided
+    if reel_id and PENDING_REGISTRY_PATH.exists():
+        try:
+            with open(PENDING_REGISTRY_PATH, "r", encoding="utf-8") as f:
+                reg = json.load(f)
+            if reel_id in reg:
+                cand = Path(reg[reel_id]["file"])
+                if cand.exists():
+                    media_file = cand
+                caption = reg[reel_id].get("caption")
+                title_label = reg[reel_id].get("title")
+        except Exception as e:
+            logger.warning(f"Could not read pending reels registry: {e}")
+
+    # 2. Fallback to session output_path
+    if not media_file and session and session.get("output_path"):
         cand = Path(session["output_path"])
         if cand.exists():
             media_file = cand
 
-    # Fallback: if not found on disk, extract directly from Telegram message!
+    # 3. Fallback: extract directly from Telegram message
     is_image = False
     if not media_file:
         msg = query.message
@@ -383,47 +470,107 @@ async def handle_post_to_insta_callback(update: Update, context: ContextTypes.DE
     hook_text = (session.get("overlay_text") if session else None) or "⚡ Daily dose of viral stories & memes @aryafeed.in"
     style = (session.get("selected_template") if session else None) or "news_banner"
 
-    # Extract caption from telegram message if available, else session
-    caption = None
-    if query.message and query.message.caption:
+    if not caption and query.message and query.message.caption:
         cap_text = query.message.caption
         import re
         code_block = re.search(r"```(?:\w+)?\n?(.*?)```", cap_text, re.DOTALL)
         if code_block:
             caption = code_block.group(1).strip()
+        else:
+            caption = cap_text.strip()
     if not caption and session:
         caption = session.get("custom_caption")
     if not caption:
         caption = generate_instagram_caption(hook_text, style=style)
 
+    if not reel_id:
+        reel_id = media_file.stem
+
     await query.edit_message_reply_markup(reply_markup=None)
     media_desc = "Photo" if is_image else "Reel"
+    display_title = f" ({title_label})" if title_label else ""
     status_msg = await context.bot.send_message(
         chat_id=chat_id,
-        text=f"🚀 *Uploading {media_desc} to Instagram (@aryafeed.in)...* Please wait.",
+        text=f"⏳ *Queued {media_desc}{display_title} for @aryafeed.in...* Checking 10-minute rate protection.",
         parse_mode="Markdown"
     )
 
-    if is_image:
-        res = await instagram_service.upload_photo(chat_id, media_file, caption=caption)
-    else:
-        res = await instagram_service.upload_reel(chat_id, media_file, caption=caption)
+    async with PUBLISH_QUEUE_LOCK:
+        pub_log = _load_publish_log()
+        recent_timestamps = []
+        for v in pub_log.values():
+            if isinstance(v, dict) and v.get("success") and v.get("published_at"):
+                try:
+                    recent_timestamps.append(datetime.fromisoformat(v["published_at"]))
+                except Exception:
+                    pass
 
-    if res.get("success"):
-        post_url = res.get("url") or "Instagram Feed"
+        if recent_timestamps:
+            last_upload = max(recent_timestamps)
+            elapsed = (datetime.now() - last_upload).total_seconds()
+            if elapsed < 600:
+                wait_sec = int(600 - elapsed)
+                mins_left = wait_sec // 60
+                secs_left = wait_sec % 60
+                await status_msg.edit_text(
+                    f"🛡️ *10-Min Rate Protection Active*\n\n"
+                    f"🎬 *{title_label or media_file.name}*\n"
+                    f"⏱️ Last upload was `{int(elapsed) // 60}m {int(elapsed) % 60}s` ago.\n"
+                    f"🚀 Auto-publishing to `@aryafeed.in` in *{mins_left}m {secs_left}s*...",
+                    parse_mode="Markdown",
+                )
+                await asyncio.sleep(wait_sec)
+
+        # Determine strict account routing:
+        # News reels -> @aryafeed.in (target_account="arya")
+        # Meme / hot sexy / aesthetic reels -> @night_thought_12 (target_account="night")
+        is_news = (
+            reel_id.startswith(("news_", "reel_", "refresh_"))
+            or "aryafeed" in (caption or "").lower()
+            or "news" in media_file.name.lower()
+            or "[per " in (caption or "").lower()
+            or any(kw in (caption or "").lower() for kw in ["#breakingnews", "#indianews", "upsc", "cji", "cjp", "protest"])
+        )
+        target_account = "arya" if is_news else "night"
+        target_handle = "@aryafeed.in" if is_news else "@night_thought_12"
+
         await status_msg.edit_text(
-            f"🎉 *{media_desc} Successfully Published to Instagram!*\n\n"
-            f"🔗 [View Live on Instagram]({post_url})\n\n"
-            f"📝 **Caption Used:**\n```\n{caption}\n```",
+            f"🚀 *Uploading {media_desc}{display_title} to Instagram ({target_handle})...* Please wait.",
             parse_mode="Markdown",
-            disable_web_page_preview=False
         )
-    else:
-        err = res.get("error", "Upload failed.")
-        await status_msg.edit_text(
-            f"❌ *Instagram Upload Failed:*\n\n{err}",
-            parse_mode="Markdown"
-        )
+
+        if is_image:
+            res = await instagram_service.upload_photo(chat_id, media_file, caption=caption, target_account=target_account)
+        else:
+            res = await instagram_service.upload_reel(chat_id, media_file, caption=caption, target_account=target_account)
+
+        if res.get("success"):
+            post_url = res.get("url") or f"https://www.instagram.com/reel/{res.get('code')}/"
+            pub_log = _load_publish_log()
+            pub_log[reel_id] = {
+                "success": True,
+                "url": post_url,
+                "account": target_handle,
+                "media_id": res.get("media_id"),
+                "code": res.get("code"),
+                "published_at": datetime.now().isoformat(),
+            }
+            _save_publish_log(pub_log)
+
+            await status_msg.edit_text(
+                f"🎉 *{media_desc} Successfully Published to {target_handle}!* \n\n"
+                f"🎬 *{title_label or media_file.name}*\n"
+                f"🔗 [View Live on Instagram]({post_url})",
+                parse_mode="Markdown",
+                disable_web_page_preview=False,
+            )
+        else:
+            err = res.get("error", "Upload failed.")
+            await status_msg.edit_text(
+                f"❌ *Instagram Upload Failed:*\n\n{err}",
+                parse_mode="Markdown",
+            )
+
 
 
 async def insta_graph_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

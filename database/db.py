@@ -98,34 +98,24 @@ class DatabaseManager:
                     ) VALUES (5381201341, 'night_thought_12', 'data/sessions/instagram_5381201341.json', 1);
                 """)
 
-            # Seed Managed Accounts for user 5381201341 (AryaFeed Default)
+            # Seed Managed Accounts for user 5381201341 (Night Thought Sole Account)
             now = datetime.now(timezone.utc).isoformat()
-            # Engine 1: @aryafeed.in (AryaFeed Media / Viral News - Active)
             await db.execute("""
                 INSERT OR IGNORE INTO managed_accounts (
                     telegram_chat_id, alias, username, engine_type, session_file, auto_post, is_active, created_at, updated_at
                 ) VALUES (
-                    5381201341, 'arya', 'aryafeed.in', 'news', 'data/sessions/instagram_aryafeed.json', 0, 1, ?, ?
+                    5381201341, 'night', 'night_thought_12', 'aesthetic', 'data/sessions/instagram_5381201341.json', 1, 1, ?, ?
                 );
             """, (now, now))
 
-            # Engine 2: @night_thought_12 (Aesthetic Autopilot)
-            await db.execute("""
-                INSERT OR IGNORE INTO managed_accounts (
-                    telegram_chat_id, alias, username, engine_type, session_file, auto_post, is_active, created_at, updated_at
-                ) VALUES (
-                    5381201341, 'night', 'night_thought_12', 'aesthetic', 'data/sessions/instagram_5381201341.json', 1, 0, ?, ?
-                );
-            """, (now, now))
-
-            # Ensure arya is marked active
-            async with db.execute("SELECT 1 FROM managed_accounts WHERE telegram_chat_id = 5381201341 AND is_active = 1") as cur:
-                if not await cur.fetchone():
-                    await db.execute("UPDATE managed_accounts SET is_active = 1 WHERE telegram_chat_id = 5381201341 AND alias = 'arya'")
-
+            # Ensure night is marked active
+            await db.execute("UPDATE managed_accounts SET is_active = 1 WHERE telegram_chat_id = 5381201341 AND alias = 'night'")
+            # Clean out any old aryafeed records
+            await db.execute("DELETE FROM managed_accounts WHERE LOWER(username) LIKE '%aryafeed%' OR LOWER(alias) LIKE '%arya%'")
+            await db.execute("DELETE FROM instagram_accounts WHERE LOWER(username) LIKE '%aryafeed%'")
 
             await db.commit()
-            logger.info(f"Database initialized at {self.db_path} with Dual-Engine accounts")
+            logger.info(f"Database initialized at {self.db_path} with Night Thought (@night_thought_12) sole account")
 
     async def get_session(self, chat_id: int) -> Optional[Dict[str, Any]]:
         """Retrieve the active session dictionary for a specific Telegram chat ID."""
@@ -330,6 +320,24 @@ class DatabaseManager:
             await db.commit()
             matched_dict["is_active"] = 1
             return matched_dict
+
+    async def get_managed_account_by_alias(self, chat_id: int, target: str) -> Optional[Dict[str, Any]]:
+        """Retrieve managed account record by alias ('night', 'arya', 'aryafeed') or username."""
+        t = target.lower().strip().lstrip("@")
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                """
+                SELECT * FROM managed_accounts 
+                WHERE telegram_chat_id = ? AND (LOWER(alias) = ? OR LOWER(username) = ? OR LOWER(alias) LIKE ?)
+                LIMIT 1
+                """,
+                (chat_id, t, t, f"{t}%"),
+            )
+            row = await cursor.fetchone()
+            if row:
+                return dict(row)
+            return None
 
     async def save_managed_account(
         self,

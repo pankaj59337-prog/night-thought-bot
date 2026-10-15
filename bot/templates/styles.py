@@ -26,7 +26,7 @@ class TemplateStyle:
     fade_seconds: float = 0.5
     highlight_color: Tuple[int, int, int, int] = (255, 220, 50, 255)
     brand_badge: bool = True
-    brand_text: str = "ARYAFEED"
+    brand_text: str = "@night_thought_12"
     brand_badge_color: Tuple[int, int, int, int] = (255, 220, 0, 255)
     source_tag: bool = False
 
