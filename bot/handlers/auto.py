@@ -464,20 +464,25 @@ def build_song_selection_keyboard(options: List[Dict[str, Any]], category: Optio
 
 @restricted
 async def auto_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle /auto command - directly launches the AryaFeed News Studio Preview."""
-    cat_id = "news_banner"
+    """Handle /auto command - directly launches the Night Thought Studio Preview."""
+    cat_id = "sexy"
     custom_text = None
     if context.args:
         first_arg = context.args[0].lower().strip()
-        if first_arg in ("card", "news_card"):
-            cat_id = "news_card"
-            if len(context.args) > 1:
-                custom_text = " ".join(context.args[1:]).strip()
-        elif first_arg in ("banner", "news", "news_banner"):
-            cat_id = "news_banner"
-            if len(context.args) > 1:
-                custom_text = " ".join(context.args[1:]).strip()
+        if first_arg in ("sexy", "hot", "sultry"):
+            cat_id = "sexy"
+        elif first_arg in ("broken", "sad", "dard"):
+            cat_id = "broken"
+        elif first_arg in ("romantic", "love"):
+            cat_id = "romantic"
+        elif first_arg in ("baddie", "attitude"):
+            cat_id = "baddie"
+        elif first_arg in ("meme", "funny"):
+            cat_id = "meme"
+        elif first_arg in ("aesthetic", "vibes"):
+            cat_id = "aesthetic"
         else:
+            cat_id = "sexy"
             custom_text = " ".join(context.args).strip()
 
     context.user_data["chosen_cat"] = cat_id

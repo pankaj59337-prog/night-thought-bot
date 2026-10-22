@@ -231,8 +231,8 @@ TEMPLATES = {
 
 
 def get_template(key: Optional[str]) -> TemplateStyle:
-    """Retrieve template by key or fallback to news_banner."""
+    """Retrieve template by key or fallback to sexy."""
     if not key:
-        return TEMPLATES["news_banner"]
-    return TEMPLATES.get(key.lower(), TEMPLATES["news_banner"])
+        return TEMPLATES["sexy"]
+    return TEMPLATES.get(key.lower(), TEMPLATES["sexy"])
 
