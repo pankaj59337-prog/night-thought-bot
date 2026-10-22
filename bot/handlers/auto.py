@@ -29,36 +29,14 @@ from database.db import db_manager
 
 logger = logging.getLogger(__name__)
 
-# Dual-Engine Categories: Night Thought (@night_thought_12) & AryaFeed (@aryafeed.in)
+# Curated Night Thought (@night_thought_12) Niches: Shayari, Dard, Romance, Saree & Baddie
 CATEGORIES: Dict[str, Dict[str, Any]] = {
-    # --- Night Thought (@night_thought_12) Exclusives: Memes, Hot/Sexy & Aesthetic ---
     "sexy": {
         "id": "sexy",
-        "title": "Hot & Sexy Saree / Late Night 🔥",
+        "title": "Hot & Saree / Late Night 🔥",
         "icon": "🔥",
         "desc": "Sultry, bold & spicy late night desi aesthetic",
         "style": "sexy",
-    },
-    "meme": {
-        "id": "meme",
-        "title": "Relatable Memes & Savage Humor 😂",
-        "icon": "😂",
-        "desc": "Funny, relatable Indian memes & witty banter",
-        "style": "meme",
-    },
-    "romantic": {
-        "id": "romantic",
-        "title": "Desi Romance & 2 AM Thoughts 💖",
-        "icon": "💖",
-        "desc": "Deep love, passionate thoughts & poetic lines",
-        "style": "romantic",
-    },
-    "baddie": {
-        "id": "baddie",
-        "title": "Baddie Vibes & Attitude 💅",
-        "icon": "💅",
-        "desc": "Unbothered confidence, boss babe & savage quotes",
-        "style": "baddie",
     },
     "broken": {
         "id": "broken",
@@ -67,12 +45,12 @@ CATEGORIES: Dict[str, Dict[str, Any]] = {
         "desc": "Silent pain, heartbreak feelings & moody vibes",
         "style": "broken",
     },
-    "cinematic": {
-        "id": "cinematic",
-        "title": "Midnight Cinematic & Reflections 🌙",
-        "icon": "🌙",
-        "desc": "Moody visual poetry & retro Delhi/Mumbai nights",
-        "style": "cinematic",
+    "romantic": {
+        "id": "romantic",
+        "title": "Desi Romance & 2 AM Thoughts 💖",
+        "icon": "💖",
+        "desc": "Deep love, passionate thoughts & poetic lines",
+        "style": "romantic",
     },
     "traditional": {
         "id": "traditional",
@@ -81,157 +59,223 @@ CATEGORIES: Dict[str, Dict[str, Any]] = {
         "desc": "Authentic Indian grace, jhumkas & ethnic charm",
         "style": "traditional",
     },
-    "aesthetic": {
-        "id": "aesthetic",
-        "title": "Soft Aesthetic & Peace 🌿",
-        "icon": "🌿",
-        "desc": "Slow living, calm mind & soft visual warmth",
-        "style": "aesthetic",
+    "baddie": {
+        "id": "baddie",
+        "title": "Baddie Vibes & Attitude 💅",
+        "icon": "💅",
+        "desc": "Unbothered confidence, boss babe & savage quotes",
+        "style": "baddie",
     },
-    # --- AryaFeed (@aryafeed.in) Exclusives: Breaking News & Current Affairs ---
-    "news": {
-        "id": "news",
-        "title": "AryaFeed News ⚡",
-        "icon": "⚡",
-        "desc": "High-curiosity viral news, milestones & debate cards",
-        "style": "news_banner",
+    "meme": {
+        "id": "meme",
+        "title": "Relatable Memes & Savage Humor 😂",
+        "icon": "😂",
+        "desc": "Funny, relatable late night Indian memes & humor",
+        "style": "meme",
     },
-    "news_banner": {
-        "id": "news_banner",
-        "title": "AryaFeed Banner ⚡",
-        "icon": "⚡",
-        "desc": "Bold yellow headline with brand pill",
-        "style": "news_banner",
+    "cinematic": {
+        "id": "cinematic",
+        "title": "Midnight Cinematic & Reflections 🌙",
+        "icon": "🌙",
+        "desc": "Moody visual poetry & retro late night thoughts",
+        "style": "cinematic",
     },
-    "news_card": {
-        "id": "news_card",
-        "title": "AryaFeed Card 📰",
-        "icon": "📰",
-        "desc": "Dark scrim card with source tag & brand pill",
-        "style": "news_card",
+    "quote": {
+        "id": "quote",
+        "title": "Late Night Deep Thoughts 📜",
+        "icon": "📜",
+        "desc": "Deep quotes & silent soul reflections",
+        "style": "quote",
     },
 }
 
-# 30 Curated Authentic Candid Reference Aesthetics (100% real photo aesthetic, zero CGI)
 ALL_IMAGE_OPTIONS: List[Dict[str, Any]] = [
     {
-        "id": "news_breaking_1",
-        "title": "Breaking News Desk",
-        "filename": "10.jpg",
-        "icon": "⚡",
-        "desc": "High impact viral Indian news backdrop",
-        "categories": ["news", "news_banner", "news_card"],
+        "id": "candid_black_saree",
+        "title": "Black Saree Mirror Selfie",
+        "filename": "candid_black_saree_mirror.jpg",
+        "icon": "🥻",
+        "desc": "Bold desi black saree late night mirror aesthetic",
+        "categories": ["sexy", "traditional"],
     },
     {
-        "id": "news_milestone_2",
-        "title": "Milestone and Achievement",
-        "filename": "107.jpg",
-        "icon": "🏆",
-        "desc": "Inspirational triumph and exam cracked visual",
-        "categories": ["news", "news_banner", "news_card"],
+        "id": "bedroom_slipdress",
+        "title": "Late Night Bedroom Candid",
+        "filename": "bedroom_slipdress_selfie.jpg",
+        "icon": "🌙",
+        "desc": "Moody 2 AM bedroom lighting & sultry gaze",
+        "categories": ["sexy", "broken"],
     },
     {
-        "id": "news_tech_3",
-        "title": "Tech and Infrastructure",
-        "filename": "12.jpg",
-        "icon": "🚀",
-        "desc": "Modern India growth and technology backdrop",
-        "categories": ["news", "news_banner", "news_card"],
+        "id": "wine_saree_balcony",
+        "title": "Wine Saree Balcony Breeze",
+        "filename": "candid_wine_saree_balcony.jpg",
+        "icon": "🍷",
+        "desc": "Deep wine red saree with midnight skyline breeze",
+        "categories": ["sexy", "romantic", "traditional"],
     },
     {
-        "id": "news_finance_4",
-        "title": "Finance and Economy",
-        "filename": "123.jpg",
-        "icon": "📈",
-        "desc": "Market trends and startup unicorn backdrop",
-        "categories": ["news", "news_banner", "news_card"],
+        "id": "desi_backless_blouse",
+        "title": "Desi Backless Blouse Grace",
+        "filename": "desi_backless_blouse_candid.jpg",
+        "icon": "🔥",
+        "desc": "Authentic Indian ethnic backless saree candid",
+        "categories": ["sexy", "traditional"],
     },
     {
-        "id": "news_debate_5",
-        "title": "Public Debate and Opinion",
-        "filename": "126.jpg",
-        "icon": "🎙️",
-        "desc": "Viral social trend and hot debate visual",
-        "categories": ["news", "news_banner", "news_card"],
+        "id": "golden_hour_saree",
+        "title": "Golden Hour Silk Saree",
+        "filename": "candid_golden_hour_saree.jpg",
+        "icon": "✨",
+        "desc": "Soft golden sunset rays on elegant silk saree",
+        "categories": ["traditional", "romantic"],
     },
     {
-        "id": "news_defense_6",
-        "title": "Defense and National Pride",
-        "filename": "129.jpg",
-        "icon": "🇮🇳",
-        "desc": "Indian forces, defense tech and national pride",
-        "categories": ["news", "news_banner", "news_card"],
+        "id": "cinematic_night_drive",
+        "title": "Midnight City Drive",
+        "filename": "cinematic_night_drive.jpg",
+        "icon": "🚗",
+        "desc": "Neon city blur reflection through car window at 2 AM",
+        "categories": ["cinematic", "broken", "quote"],
     },
     {
-        "id": "news_civic_7",
-        "title": "Civic and Society",
-        "filename": "133.jpg",
-        "icon": "🏛️",
-        "desc": "Governance, urban laws and civic developments",
-        "categories": ["news", "news_banner", "news_card"],
+        "id": "neon_car_passenger",
+        "title": "Neon Passenger Gaze",
+        "filename": "candid_neon_car_passenger.jpg",
+        "icon": "🌃",
+        "desc": "Late night passenger seat moody reflections",
+        "categories": ["cinematic", "baddie"],
     },
     {
-        "id": "news_science_8",
-        "title": "Space and Science",
-        "filename": "158.jpg",
-        "icon": "🌕",
-        "desc": "ISRO space missions and scientific breakthroughs",
-        "categories": ["news", "news_banner", "news_card"],
+        "id": "rooftop_midnight_lights",
+        "title": "Rooftop Midnight Lights",
+        "filename": "candid_rooftop_midnight_lights.jpg",
+        "icon": "✨",
+        "desc": "City skyline bokeh with late night emotional silence",
+        "categories": ["broken", "cinematic", "romantic"],
     },
     {
-        "id": "news_lifestyle_9",
-        "title": "Gen-Z and Career",
-        "filename": "176.jpg",
-        "icon": "💼",
-        "desc": "Jobs, education trends and youth culture",
-        "categories": ["news", "news_banner", "news_card"],
+        "id": "croptop_mirror_selfie",
+        "title": "Baddie Mirror Glow",
+        "filename": "candid_croptop_mirror_selfie.jpg",
+        "icon": "💅",
+        "desc": "Confident baddie aesthetic & golden hour glow",
+        "categories": ["baddie", "sexy"],
     },
     {
-        "id": "news_sports_10",
-        "title": "Sports and Cricket",
-        "filename": "182.jpg",
-        "icon": "🏏",
-        "desc": "Cricket records, world championships and sports news",
-        "categories": ["news", "news_banner", "news_card"],
+        "id": "pastel_saree_romantic",
+        "title": "Pastel Saree Soft Romance",
+        "filename": "pastel_saree_romantic.jpg",
+        "icon": "🌸",
+        "desc": "Soft pastel saree with gentle dreamy smile",
+        "categories": ["romantic", "traditional"],
+    },
+    {
+        "id": "cozy_sweater_coffee",
+        "title": "Cozy Late Night Winter",
+        "filename": "candid_cozy_sweater_coffee.jpg",
+        "icon": "☕",
+        "desc": "Warm coffee mug, soft oversized sweater & quiet thoughts",
+        "categories": ["broken", "quote"],
+    },
+    {
+        "id": "banarasi_diya_courtyard",
+        "title": "Banarasi Diya Ethnic Charm",
+        "filename": "candid_banarasi_diya_courtyard.jpg",
+        "icon": "🪔",
+        "desc": "Traditional heritage courtyard with warm diya glow",
+        "categories": ["traditional"],
+    },
+    {
+        "id": "desi_saree_selfie",
+        "title": "Desi Saree Candid Selfie",
+        "filename": "desi_saree_candid_selfie.jpg",
+        "icon": "🥻",
+        "desc": "Close-up candid desi smile with silver jhumkas",
+        "categories": ["traditional", "sexy", "romantic"],
+    },
+    {
+        "id": "halter_denim_candid",
+        "title": "Urban Late Night Mood",
+        "filename": "halter_denim_candid.jpg",
+        "icon": "🖤",
+        "desc": "Casual chic street candid in midnight city light",
+        "categories": ["baddie", "sexy"],
     },
 ]
+
 ALL_HOOK_OPTIONS: List[Dict[str, Any]] = [
-    {"id": "h_news_1", "text": "22 FRIENDS STUDIED TOGETHER, *21 CRACKED* THE EXAM 🥹🎓", "categories": ["news", "news_banner", "news_card"]},
-    {"id": "h_news_2", "text": "TEA VENDOR'S DAUGHTER CRACKS *UPSC EXAM* IN FIRST ATTEMPT 🇮🇳✨", "categories": ["news", "news_banner", "news_card"]},
-    {"id": "h_news_3", "text": "SWIGGY DELIVERY GUY RETURNS *₹15 LAKH CASH* LEFT IN CAB 👏🛵", "categories": ["news", "news_banner", "news_card"]},
-    {"id": "h_news_4", "text": "MAN BUYS OLD SCOOTER FOR ₹20,000, FINDS *₹50 LAKH GOLD* HIDDEN 🤯🪙", "categories": ["news", "news_banner", "news_card"]},
-    {"id": "h_news_5", "text": "INDIA WINS *HISTORIC GOLD* AFTER 48 YEARS, STADIUM TEARS UP 🇮🇳🏆", "categories": ["news", "news_banner", "news_card"]},
-    {"id": "h_news_6", "text": "VIRAL CCTV: BOY RISKS LIFE TO SAVE STREET DOG FROM *SPEEDING TRUCK* 🐶💔", "categories": ["news", "news_banner", "news_card"]},
-    {"id": "h_news_7", "text": "FATHER WORKED AS LABOURER FOR 25 YEARS TO MAKE SON *IPS OFFICER* 🫡🇮🇳", "categories": ["news", "news_banner", "news_card"]},
-    {"id": "h_news_8", "text": "ISRO ANNOUNCES MASSIVE DISCOVERY: WATER ICE CONFIRMED ON *MOON POLE* 🌕🚀", "categories": ["news", "news_banner", "news_card"]},
-    {"id": "h_news_9", "text": "GOLD PRICES SMASH ALL-TIME *HISTORIC HIGH* IN INDIA TODAY 🪙📈", "categories": ["news", "news_banner", "news_card"]},
-    {"id": "h_news_10", "text": "NEW TRAFFIC RULES: *₹25,000 FINE* FOR THIS MISTAKE FROM TOMORROW 🚨🚗", "categories": ["news", "news_banner", "news_card"]},
-    {"id": "h_news_11", "text": "WHATSAPP ROLLS OUT *BIGGEST PRIVACY UPDATE* OF 2026 WORLDWIDE 📱🔒", "categories": ["news", "news_banner", "news_card"]},
-    {"id": "h_news_12", "text": "19-YEAR-OLD FROM BIHAR BUILDS *ELECTRIC CAR* FOR UNDER ₹60,000 ⚡🚗", "categories": ["news", "news_banner", "news_card"]},
-    {"id": "h_news_13", "text": "TATA GROUP COMMENCES INDIA'S BIGGEST *SEMICONDUCTOR CHIP FAB* 🏭🇮🇳", "categories": ["news", "news_banner", "news_card"]},
-    {"id": "h_news_14", "text": "KASHMIR RAIL LINK: WORLD'S HIGHEST *CHENAB BRIDGE* OPENS REGULAR RUNS 🌉❄️", "categories": ["news", "news_banner", "news_card"]},
-    {"id": "h_news_15", "text": "HIGHWAY TOLL TAX TO BE *WAIVED OFF* FOR VEHICLES USING GNSS-FASTAG 🛣️🚘", "categories": ["news", "news_banner", "news_card"]},
-    {"id": "h_news_16", "text": "IIT GRADUATE REJECTS *₹1.5 CR US JOB* TO TEACH RURAL VILLAGE CHILDREN 📚❤️", "categories": ["news", "news_banner", "news_card"]},
-    {"id": "h_news_17", "text": "RBI MANDATES INSTANT *UPI REFUND RULE* FOR FAILED TRANSACTIONS 💸📲", "categories": ["news", "news_banner", "news_card"]},
-    {"id": "h_news_18", "text": "SOLAR BOOM: OVER *1 CRORE HOMES* POWERED BY PM SURYA GHAR SCHEME ☀️⚡", "categories": ["news", "news_banner", "news_card"]},
-    {"id": "h_news_19", "text": "DELHI TO MUMBAI IN 12 HOURS: EXPRESSWAY'S *FINAL LINK* OPERATIONAL 🛣️🏎️", "categories": ["news", "news_banner", "news_card"]},
-    {"id": "h_news_20", "text": "INDIAN AIR FORCE INDUCTS FIRST SQUADRON OF *TEJAS MK-1A FIGHTERS* ✈️🇮🇳", "categories": ["news", "news_banner", "news_card"]},
-    {"id": "h_news_21", "text": "STUDENT CRACKS CAT WITH *100 PERCENTILE* WHILE DOING 10-HR NIGHT SHIFTS 🎯📊", "categories": ["news", "news_banner", "news_card"]},
-    {"id": "h_news_22", "text": "APPLE EXPANDS: 1 OUT OF EVERY *4 IPHONES* NOW MANUFACTURED IN INDIA 📱🇮🇳", "categories": ["news", "news_banner", "news_card"]},
-    {"id": "h_news_23", "text": "IIT MADRAS HYPERLOOP TEST TRACK HITS *400 KM/H SPEED* IN TRIALS 🚅⚡", "categories": ["news", "news_banner", "news_card"]},
-    {"id": "h_news_24", "text": "INDIAN PASSPORT STRENGTH SOARS: *VISA-FREE TRAVEL* EXTENDED TO 62 NATIONS 🌍✈️", "categories": ["news", "news_banner", "news_card"]},
-    {"id": "h_news_25", "text": "4-DAY WORK WEEK DRAFT: LABOUR MINISTRY CONSIDERS *NEW WORKPLACE RULES* 💼⏰", "categories": ["news", "news_banner", "news_card"]},
-    {"id": "h_news_26", "text": "5G SATELLITE DIRECT-TO-MOBILE LAUNCHING: *ZERO CALL DROPS* EVERYWHERE 📡📱", "categories": ["news", "news_banner", "news_card"]},
-    {"id": "h_news_27", "text": "TWO 21-YEAR-OLDS FROM JAIPUR BUILD *₹500 CRORE AI STARTUP* IN 18 MONTHS 🦄✨", "categories": ["news", "news_banner", "news_card"]},
-    {"id": "h_news_28", "text": "MANDATORY 6-AIRBAG RULE OFFICIALLY EXTENDED TO ALL *BUDGET HATCHBACKS* 🚙🛡️", "categories": ["news", "news_banner", "news_card"]},
-    {"id": "h_news_29", "text": "GEOLOGISTS CONFIRM GIANT *FRESHWATER RESERVOIR* FOUND DEEP UNDER THAR 💧🏜️", "categories": ["news", "news_banner", "news_card"]},
-    {"id": "h_news_30", "text": "OVER 15 CRORE PILGRIMS VISITED *AYODHYA AND KASHI* THIS YEAR: TOURISM RECORD 🛕🚩", "categories": ["news", "news_banner", "news_card"]},
-    {"id": "h_news_31", "text": "VANDE BHARAT SLEEPER TRAINS LAUNCHED ACROSS *15 INTERCITY ROUTES* 🚆🛌", "categories": ["news", "news_banner", "news_card"]},
-    {"id": "h_news_32", "text": "WORLD BANK DECLARES INDIA AS THE *FASTEST GROWING ECONOMY* OF 2026 📊🚀", "categories": ["news", "news_banner", "news_card"]},
-    {"id": "h_news_33", "text": "INDIAN STARTUP DESIGNS AFFORDABLE *PROSTHETIC LIMB* CONTROLLED BY BRAIN 🦾❤️", "categories": ["news", "news_banner", "news_card"]},
-    {"id": "h_news_34", "text": "SURGICAL STRIKE ON CYBER FRAUD: NEW LAW CARRIES *STRICT 10-YR JAIL TERM* ⚖️📵", "categories": ["news", "news_banner", "news_card"]},
-    {"id": "h_news_35", "text": "FARMER'S DAUGHTER WINS *RHODES SCHOLARSHIP* TO STUDY AT OXFORD UNIVERSITY 🌟🎓", "categories": ["news", "news_banner", "news_card"]},
+    # Broken & Dard / Late Night Heartbreak
+    {"id": "h_broken_1", "text": "Dard tab nahi hota jab koi chhod ke jaye, dard tab hota hai jab koi umeed deke tod jaye 🥀", "categories": ["broken"]},
+    {"id": "h_broken_2", "text": "Kuch baatein kehne ke liye lafz nahi, bas khamoshi kafi hoti hai 💔", "categories": ["broken", "quote"]},
+    {"id": "h_broken_3", "text": "Raat ke 2 baje wahi log yaad aate hain jo ab sirf yaadon me bache hain 🥀", "categories": ["broken", "cinematic"]},
+    {"id": "h_broken_4", "text": "We went from talking every hour to strangers who know each other's deepest secrets 💔", "categories": ["broken"]},
+    {"id": "h_broken_5", "text": "Ek tarfa pyaar bhi ajeeb hota hai, khud hi tute aur khud hi sambhal gaye 🥀", "categories": ["broken", "romantic"]},
+    {"id": "h_broken_6", "text": "It hurts when you realize you were just a chapter in someone's book, while they were your whole story 💔", "categories": ["broken"]},
+    {"id": "h_broken_7", "text": "Log puchte hain itne chup kyu rehte ho? Ab unhe kaun bataye shor andar kitna hai 🥀", "categories": ["broken", "quote"]},
+    {"id": "h_broken_8", "text": "Some goodbyes hurt not because they left, but because they never looked back 💔", "categories": ["broken"]},
+    {"id": "h_broken_9", "text": "Khush rehne ka dikhava karte karte, sach me muskurana bhool gaye 🥀", "categories": ["broken"]},
+    {"id": "h_broken_10", "text": "Maine toh bas sukoon manga tha, zindagi ne dard ka hisab pakda diya 💔", "categories": ["broken"]},
+    {"id": "h_broken_11", "text": "Waqt badla, log badle, aur hum unki yaadon me hi atak gaye 🥀", "categories": ["broken", "cinematic"]},
+
+    # Hot & Sultry Late Night / Saree
+    {"id": "h_sexy_1", "text": "If u think u can flirt better than me, talk to me after 2 AM 🌚💋", "categories": ["sexy"]},
+    {"id": "h_sexy_2", "text": "Maine flirt back kardiya na to ladle tu so nahi payega 🙈🔥", "categories": ["sexy"]},
+    {"id": "h_sexy_3", "text": "Unhe laga saree me masoom lagungi, ab unhe kaun samjhaye ki aag pallu me hai 🌚💋", "categories": ["sexy", "traditional"]},
+    {"id": "h_sexy_4", "text": "Ek toh ye kali saree, upar se tumhari ye nigahein... aaj raat bachna mushkil hai 🌚💋", "categories": ["sexy", "traditional"]},
+    {"id": "h_sexy_5", "text": "Saree pehnu ya western, tera dhyan toh bas meri kamar pe hi rukna hai 🙈🔥", "categories": ["sexy", "traditional"]},
+    {"id": "h_sexy_6", "text": "Tumhe lagta hai main shant hoon? kabhi akele me milna, saare vaham nikal dungi 🌚✨", "categories": ["sexy"]},
+    {"id": "h_sexy_7", "text": "Raat ke 2 baje tumhara khayal aur ye thandi hawa... mood kharab kar rahi hai 💋", "categories": ["sexy"]},
+    {"id": "h_sexy_8", "text": "I'm not responsible agar meri saree ka pallu dekh kar tumhara control kho jaye 🌚✨", "categories": ["sexy", "traditional"]},
+    {"id": "h_sexy_9", "text": "Jitna tum innocent bante ho na, utne hi khatarnaak tumhare iraade hain 🙈🔥", "categories": ["sexy"]},
+    {"id": "h_sexy_10", "text": "Bas ek baar pyaar se pakad lo, saari zidd ek second me pighal jayegi 💋", "categories": ["sexy", "romantic"]},
+    {"id": "h_sexy_11", "text": "Late night mirror selfie sirf isliye, taaki tumhari neend thodi aur udd sake 🌚💋", "categories": ["sexy"]},
+    {"id": "h_sexy_12", "text": "Main toh chup-chap baithi thi, par meri saree ki dori ne saara kaam kharab kar diya 💋🙈", "categories": ["sexy", "traditional"]},
+    {"id": "h_sexy_13", "text": "Zulfein bandh ke rakhu ya kholi chhod du? batao kis me hosh khone ka irada hai 💋✨", "categories": ["sexy"]},
+    {"id": "h_sexy_14", "text": "Mera favourite outfit? Saree... aur tera favourite part? Uski dori 🙈🔥", "categories": ["sexy", "traditional"]},
+    {"id": "h_sexy_15", "text": "I'm not a bad girl, but with you I definitely have bad intentions 💋✨", "categories": ["sexy", "baddie"]},
+    {"id": "h_sexy_16", "text": "flirt back karne ki galti mat karna, aadat lag gayi toh chhutti nahi milegi 🌚💋", "categories": ["sexy"]},
+    {"id": "h_sexy_17", "text": "Thoda aur paas aao... kuch aisi baat kehni hai jo hawa bhi na sun sake 🌚🔥", "categories": ["sexy", "romantic"]},
+    {"id": "h_sexy_18", "text": "Ek cup chai, thandi raat, aur tumhari shararati ungliyan meri kamar par... 🌚💋", "categories": ["sexy", "romantic"]},
+
+    # Desi Romance & Deep Feelings
+    {"id": "h_romance_1", "text": "I fell in love with the way you touch my soul without even touching my hands 💖", "categories": ["romantic"]},
+    {"id": "h_romance_2", "text": "In every lifetime and every universe, my heart would still find yours ✨", "categories": ["romantic"]},
+    {"id": "h_romance_3", "text": "Tum mil gaye toh aisa laga jaise bhatakti hui rooh ko apna thikana mil gaya 💖", "categories": ["romantic"]},
+    {"id": "h_romance_4", "text": "Bas ek baar haath tham ke toh dekho, har mod par sath chalenge ✨", "categories": ["romantic"]},
+    {"id": "h_romance_5", "text": "Teri muskurahat meri sabse badi kamzori bhi hai aur takat bhi 💖", "categories": ["romantic"]},
+    {"id": "h_romance_6", "text": "With you, even silence feels like the deepest conversation 🌸", "categories": ["romantic", "quote"]},
+    {"id": "h_romance_7", "text": "You don't feel like an accident. You feel like destiny 💖", "categories": ["romantic"]},
+
+    # Traditional Saree Grace
+    {"id": "h_trad_1", "text": "Jhumke ki chhan-chhan aur saree ka pallu, kisi ka dil churane ke liye kafi hai ✨🥻", "categories": ["traditional"]},
+    {"id": "h_trad_2", "text": "Authentic desi grace: Kajal in eyes, jhumka in ears, and chaos in his heart 🤍🥻", "categories": ["traditional"]},
+    {"id": "h_trad_3", "text": "They told me to dress simple, so I wore a silk saree and broke all rules 🥻✨", "categories": ["traditional", "baddie"]},
+    {"id": "h_trad_4", "text": "Teri ek nazar kafi hai mere dil ka thermostat badhane ke liye 🔥🙈", "categories": ["traditional", "sexy"]},
+
+    # Baddie Attitude
+    {"id": "h_baddie_1", "text": "Never lower your standards for someone who didn't even reach the bar 💅", "categories": ["baddie"]},
+    {"id": "h_baddie_2", "text": "They talked behind my back because they couldn't keep up with my front 🔥", "categories": ["baddie"]},
+    {"id": "h_baddie_3", "text": "Too glam to give a damn, too focused to entertain clowns 💅", "categories": ["baddie"]},
+    {"id": "h_baddie_4", "text": "Apna attitude apne paas rakh, meri nazar me aane ke liye aukat chahiye 🔥", "categories": ["baddie"]},
+    {"id": "h_baddie_5", "text": "Unbothered, moisturized, in my lane, well-hydrated and thriving 💅", "categories": ["baddie"]},
+    {"id": "h_baddie_6", "text": "I am the standard, not the alternative 🔥", "categories": ["baddie"]},
+
+    # Relatable Memes
+    {"id": "h_meme_1", "text": "Me: I'm gonna sleep early tonight.\nMy brain at 3 AM: Let's re-examine that awkward interaction from 2017 😂", "categories": ["meme"]},
+    {"id": "h_meme_2", "text": "Single hone ka ek faida hai: koi puchne wala nahi 'kis se baat kar rahe the?' 😂", "categories": ["meme"]},
+    {"id": "h_meme_3", "text": "Salary aati hai toh lagta hai Ambani hoon, teesre din Maggi pe aa jata hoon 😭", "categories": ["meme"]},
+    {"id": "h_meme_4", "text": "Overthinking is my cardio, tension is my protein shake 😂", "categories": ["meme"]},
+    {"id": "h_meme_5", "text": "Sleep schedule itna kharab hai ki America ke timezone me jee raha hoon 💀", "categories": ["meme"]},
+    {"id": "h_meme_6", "text": "Me replying to a reel in 2 seconds but taking 4 business days to reply to a normal text 🌚", "categories": ["meme"]},
+
+    # Midnight Cinematic & Deep Thoughts
+    {"id": "h_cine_1", "text": "In a city of eight million people, all I looked for was your silhouette 🌙", "categories": ["cinematic", "broken"]},
+    {"id": "h_cine_2", "text": "The moon never apologizes for being alone among billions of stars ✨", "categories": ["cinematic", "quote"]},
+    {"id": "h_cine_3", "text": "Memories don't die, they just learn how to live in the dark 🌙", "categories": ["cinematic", "broken"]},
 ]
+
+
 def get_image_option(img_id: str) -> Dict[str, Any]:
     """Retrieve image option dictionary by ID, custom upload, or dynamic slot."""
     if img_id == "custom_upload":
@@ -240,8 +284,8 @@ def get_image_option(img_id: str) -> Dict[str, Any]:
             "title": "Custom Uploaded Photo",
             "filename": "custom_upload.jpg",
             "icon": "📸",
-            "desc": "User-provided custom image from ChatGPT/Gemini/Gallery",
-            "categories": ["news", "news_banner", "news_card"],
+            "desc": "User-provided custom image from Gallery",
+            "categories": ["sexy", "broken", "romantic", "traditional"],
         }
     if img_id.startswith("dyn_") or img_id.startswith("ai_gen_"):
         return {
@@ -250,7 +294,7 @@ def get_image_option(img_id: str) -> Dict[str, Any]:
             "filename": f"{img_id}.jpg",
             "icon": "✨",
             "desc": "Dynamic AI visual generated uniquely for you",
-            "categories": ["news", "news_banner", "news_card"],
+            "categories": ["sexy", "broken", "romantic", "traditional"],
         }
     if img_id.startswith("pin_"):
         for opt in ALL_IMAGE_OPTIONS:
@@ -262,7 +306,7 @@ def get_image_option(img_id: str) -> Dict[str, Any]:
             "filename": f"{img_id}.jpg",
             "icon": "📌",
             "desc": "Fresh candid visual from Pinterest CDN",
-            "categories": ["news", "news_banner", "news_card"],
+            "categories": ["sexy", "broken", "romantic", "traditional"],
         }
     for opt in ALL_IMAGE_OPTIONS:
         if opt["id"] == img_id:
@@ -271,10 +315,10 @@ def get_image_option(img_id: str) -> Dict[str, Any]:
 
 
 def get_category_info(cat_id: Optional[str]) -> Dict[str, Any]:
-    """Retrieve category dictionary or default to 'news_banner'."""
+    """Retrieve category dictionary or default to 'sexy'."""
     if cat_id and cat_id.lower() in CATEGORIES:
         return CATEGORIES[cat_id.lower()]
-    return CATEGORIES["news_banner"]
+    return CATEGORIES["sexy"]
 
 
 async def get_fresh_image_options(
@@ -318,7 +362,7 @@ async def get_fresh_image_options(
             "filename": f"{unique_dyn_id}.jpg",
             "icon": "✨",
             "desc": "100% brand new dynamic AI visual generation",
-            "categories": [cat] if cat else ["news", "news_banner", "news_card"],
+            "categories": [cat] if cat else ["news", "sexy", "news_card"],
         })
 
     random.shuffle(candidates)
@@ -368,11 +412,23 @@ async def get_fresh_hook_options(
 
 
 def build_category_selection_keyboard() -> InlineKeyboardMarkup:
-    """AryaFeed Studio Layout Styles."""
+    """Night Thought Studio Categories Keyboard."""
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("⚡ AryaFeed Banner Style", callback_data="cat_news_banner"),
-            InlineKeyboardButton("📰 AryaFeed Card Style", callback_data="cat_news_card"),
+            InlineKeyboardButton("🔥 Hot & Saree", callback_data="cat_sexy"),
+            InlineKeyboardButton("🥀 Late Night Dard", callback_data="cat_broken"),
+        ],
+        [
+            InlineKeyboardButton("💖 Desi Romance", callback_data="cat_romantic"),
+            InlineKeyboardButton("🥻 Saree Grace", callback_data="cat_traditional"),
+        ],
+        [
+            InlineKeyboardButton("💅 Baddie Attitude", callback_data="cat_baddie"),
+            InlineKeyboardButton("😂 Relatable Memes", callback_data="cat_meme"),
+        ],
+        [
+            InlineKeyboardButton("🌙 Midnight Cinematic", callback_data="cat_cinematic"),
+            InlineKeyboardButton("📜 Deep Thoughts", callback_data="cat_quote"),
         ],
     ])
 
@@ -515,8 +571,15 @@ async def handle_quick_text_triggers(update: Update, context: ContextTypes.DEFAU
         return False
 
     raw = message.text.strip().lower()
-    if raw in ("reel", "reels", "auto", "start", "new", "image", "video", "create", "news", "studio", "banner", "card"):
-        cat_id = "news_card" if raw in ("card", "news_card") else "news_banner"
+    if raw in ("reel", "reels", "auto", "start", "new", "image", "video", "create", "news", "studio", "banner", "card", "shayari", "dard", "broken", "sexy"):
+        if any(w in raw for w in ("broken", "dard", "sad", "breakup")):
+            cat_id = "broken"
+        elif any(w in raw for w in ("romantic", "love", "pyar")):
+            cat_id = "romantic"
+        elif any(w in raw for w in ("traditional", "saree", "ethnic")):
+            cat_id = "traditional"
+        else:
+            cat_id = "sexy"
         context.user_data["chosen_cat"] = cat_id
         await send_interactive_studio_preview(
             update,
@@ -636,7 +699,7 @@ async def handle_song_name_input(
                     img_id = opt["id"]
                     break
 
-    cat = cat or "news_banner"
+    cat = cat or "sexy"
     img_id = img_id or "news_breaking_1"
     hook_text = hook_text or "22 FRIENDS STUDIED TOGETHER, *21 CRACKED* THE EXAM 🥹🎓"
 
@@ -677,7 +740,7 @@ async def render_custom_selected_reel(
 ) -> None:
     """Render 15s 1080x1920 reel with selected non-repeating assets, fade animations and record usage."""
     chat_id = update.effective_chat.id
-    cat = category or context.user_data.get("chosen_cat", "news_banner")
+    cat = category or context.user_data.get("chosen_cat", "sexy")
     cat_info = get_category_info(cat)
     # 1. Immediately record assets in DB only when NOT in testing mode
     is_testing = await db_manager.is_testing_mode()
@@ -826,7 +889,7 @@ async def render_custom_selected_reel(
 async def complete_custom_reel_flow(update: Update, context: ContextTypes.DEFAULT_TYPE, custom_text: str) -> None:
     """Handle custom text input: generate preview first and ask for song name."""
     chat_id = update.effective_chat.id
-    cat = context.user_data.get("chosen_cat", "news_banner")
+    cat = context.user_data.get("chosen_cat", "sexy")
     img_id = context.user_data.get("chosen_img", "news_breaking_1")
     await send_visual_text_preview(update, context, chat_id, img_id=img_id, hook_text=custom_text, cat_id=cat)
 
@@ -869,18 +932,18 @@ def get_random_category_image(cat_id: str, chat_id: int, used_names_override: Op
 
 
 def build_studio_preview_keyboard() -> InlineKeyboardMarkup:
-    """Action buttons attached to the live 1080x1920 AryaFeed preview image."""
+    """Action buttons attached to the live 1080x1920 Night Thought preview image."""
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("🎬 Render AryaFeed Reel", callback_data="studio_render")
+            InlineKeyboardButton("🎬 Render Night Thought Reel", callback_data="studio_render")
         ],
         [
             InlineKeyboardButton("⏭️ Next Photo", callback_data="studio_skip"),
-            InlineKeyboardButton("🔄 New Headline", callback_data="studio_new_text"),
+            InlineKeyboardButton("🔄 New Shayari / Line", callback_data="studio_new_text"),
         ],
         [
-            InlineKeyboardButton("✏️ Custom Headline", callback_data="studio_custom_text"),
-            InlineKeyboardButton("📰 Toggle Card/Banner", callback_data="studio_toggle_style"),
+            InlineKeyboardButton("✏️ Custom Text", callback_data="studio_custom_text"),
+            InlineKeyboardButton("🎨 Change Category", callback_data="back_to_cats"),
         ],
     ])
 
@@ -901,12 +964,14 @@ async def send_interactive_studio_preview(
     if force_new_img or not image_path or not image_path.exists():
         image_path = get_random_category_image(cat_id, chat_id)
 
-    # 2. Resolve text
+    # 2. Resolve text (Guaranteed Late Night Thoughts / Shayari, ZERO news)
     if not custom_text:
+        from bot.services.ai_text_engine import generate_viral_text
         cat_hooks = [h["text"] for h in ALL_HOOK_OPTIONS if cat_id in h.get("categories", [])]
-        if not cat_hooks:
-            cat_hooks = [h["text"] for h in ALL_HOOK_OPTIONS]
-        chosen_text = random.choice(cat_hooks)
+        if cat_hooks:
+            chosen_text = random.choice(cat_hooks)
+        else:
+            chosen_text = generate_viral_text(style=cat_id)
     else:
         chosen_text = custom_text
 
@@ -938,12 +1003,13 @@ async def send_interactive_studio_preview(
     )
 
     caption = (
-        f"📸 *Live Reel Studio Preview (1080x1920)*\n\n"
+        f"🌙 *Night Thought Studio Preview (1080x1920)*\n\n"
         f"• 📂 *Category:* {cat_info['icon']} *{cat_info['title']}*\n"
         f"• 🖼️ *Image:* `{image_path.name}`\n"
         f"• ✍️ *Text:* \"_{chosen_text}_\"\n\n"
-        f"👉 Tap **🎬 Render Reel** to finalize video.\n"
-        f"👉 Tap **⏭️ Skip Photo** to preview next image.\n"
+        f"👉 Tap **🎬 Render Night Thought Reel** to finalize video.\n"
+        f"👉 Tap **⏭️ Next Photo** to preview next image.\n"
+        f"👉 Tap **🔄 New Shayari / Line** for fresh poetry.\n"
         f"👉 Tap **✏️ Custom Text** to enter your own lines."
     )
 
@@ -963,7 +1029,7 @@ async def handle_studio_custom_text_input(
     custom_text: str,
 ) -> None:
     """Re-render studio preview with user's custom entered text."""
-    cat_id = context.user_data.get("chosen_cat", "news_banner")
+    cat_id = context.user_data.get("chosen_cat", "sexy")
     img_p_str = context.user_data.get("studio_img_path")
     img_p = Path(img_p_str) if (img_p_str and Path(img_p_str).exists()) else None
 
@@ -1028,21 +1094,29 @@ async def execute_studio_reel_render(
             status_tag = "*(Testing Mode — Kept in Pool 🔄)*"
 
         hashtags = "#reels #trending #viral #fyp #explore #explorepage #instareels #aesthetic"
+        post_caption = generate_instagram_caption(hook_text, style=cat_id)
         caption = (
-            f"🔥 *Reel Ready!*\n\n"
+            f"🌙 *Night Thought Reel Ready!*\n\n"
             f"• 📂 *Category:* {cat_info['icon']} {cat_info['title']}\n"
             f"• 📸 *Image:* `{image_path.name}` {status_tag}\n"
             f"• 🎤 *Song:* {song_title}\n"
             f"• 📝 *Text:* \"{hook_text}\"\n\n"
             f"_{hook_text}_\n\n"
-            f"{hashtags}"
+            f"🌙 *Instagram @night_thought_12*"
         )
+
+        insta_keyboard = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("🚀 1-Tap Post to Instagram (@night_thought_12)", callback_data="post_insta"),
+            ]
+        ])
 
         with open(final_video_path, "rb") as video_file:
             await context.bot.send_video(
                 chat_id=chat_id,
                 video=video_file,
                 caption=caption,
+                reply_markup=insta_keyboard,
                 supports_streaming=True,
                 parse_mode="Markdown",
                 write_timeout=180,
@@ -1095,11 +1169,11 @@ async def handle_auto_callbacks(update: Update, context: ContextTypes.DEFAULT_TY
 
         status_msg = await context.bot.send_message(
             chat_id=chat_id,
-            text="🎬 *Rendering 1080x1920 ARYAFEED Animated Reel...*\n\nAdding Ken Burns zoom motion, Bollywood vocal audio & `[ ARYAFEED ]` watermark ⚡",
+            text="🎬 *Rendering 1080x1920 Night Thought Reel...*\n\nAdding Ken Burns zoom motion, Bollywood vocal audio & `@night_thought_12` watermark 🌙",
             parse_mode="Markdown"
         )
 
-        cat_id = "news_banner"
+        cat_id = "sexy"
         vocal_path = music_service.get_bollywood_track(cat_id)
         song_title = music_service.get_track_title(vocal_path)
 
@@ -1117,7 +1191,7 @@ async def handle_auto_callbacks(update: Update, context: ContextTypes.DEFAULT_TY
 
         try:
             final_video = await execute_render_job(chat_id)
-            caption = session.get("custom_caption") or "⚡ Daily dose of viral stories & reels @aryafeed.in\n#aryafeed #reels #viral #trending"
+            caption = session.get("custom_caption") or "🌙 Raat gehri, baatein ankahi...\n\n👉 Follow @night_thought_12 for daily late night thoughts & poetry ✨\n#nightthought #shayari #reels #viral #trending"
 
             await db_manager.update_session(
                 chat_id,
@@ -1128,7 +1202,7 @@ async def handle_auto_callbacks(update: Update, context: ContextTypes.DEFAULT_TY
 
             keyboard = InlineKeyboardMarkup([
                 [
-                    InlineKeyboardButton("🚀 1-Tap Post Reel to Instagram", callback_data="post_insta"),
+                    InlineKeyboardButton("🚀 1-Tap Post to Instagram (@night_thought_12)", callback_data="post_insta"),
                 ]
             ])
 
@@ -1142,10 +1216,10 @@ async def handle_auto_callbacks(update: Update, context: ContextTypes.DEFAULT_TY
                     chat_id=chat_id,
                     video=vf,
                     caption=(
-                        f"🎬 *ARYAFEED 1080x1920 Reel Ready!*\n\n"
+                        f"🎬 *Night Thought 1080x1920 Reel Ready!*\n\n"
                         f"🎵 *Audio:* {song_title}\n"
-                        f"🏷️ *Brand:* `[ ARYAFEED ]` (Bottom Right)\n\n"
-                        f"Tap below to publish reel live to `@aryafeed.in`:"
+                        f"🏷️ *Brand:* `@night_thought_12` (Bottom Right)\n\n"
+                        f"Tap below to publish reel live to `@night_thought_12`:"
                     ),
                     reply_markup=keyboard,
                     parse_mode="Markdown",
@@ -1156,7 +1230,7 @@ async def handle_auto_callbacks(update: Update, context: ContextTypes.DEFAULT_TY
         return
 
     elif data == "studio_skip":
-        cat_id = context.user_data.get("chosen_cat", "news_banner")
+        cat_id = context.user_data.get("chosen_cat", "sexy")
         try:
             await query.delete_message()
         except Exception:
@@ -1165,7 +1239,7 @@ async def handle_auto_callbacks(update: Update, context: ContextTypes.DEFAULT_TY
         return
 
     elif data == "studio_new_text":
-        cat_id = context.user_data.get("chosen_cat", "news_banner")
+        cat_id = context.user_data.get("chosen_cat", "sexy")
         img_p_str = context.user_data.get("studio_img_path")
         img_p = Path(img_p_str) if img_p_str else None
         try:
@@ -1176,8 +1250,8 @@ async def handle_auto_callbacks(update: Update, context: ContextTypes.DEFAULT_TY
         return
 
     elif data == "studio_toggle_style":
-        curr_cat = context.user_data.get("chosen_cat", "news_banner")
-        next_cat = "news_card" if curr_cat != "news_card" else "news_banner"
+        curr_cat = context.user_data.get("chosen_cat", "sexy")
+        next_cat = "news_card" if curr_cat != "news_card" else "sexy"
         context.user_data["chosen_cat"] = next_cat
         img_p_str = context.user_data.get("studio_img_path")
         hook_text = context.user_data.get("studio_text")
@@ -1193,8 +1267,8 @@ async def handle_auto_callbacks(update: Update, context: ContextTypes.DEFAULT_TY
         context.user_data["waiting_for_custom_text"] = True
         await db_manager.update_session(chat_id, current_step="WAITING_STUDIO_TEXT")
         msg = (
-            "✏️ *Type your AryaFeed breaking headline / news text:*\n\n"
-            "Send your text in this chat, and the bot will instantly render a new preview with `[ ARYAFEED.IN ]` badge on this photo!"
+            "✏️ *Type your Night Thought shayari / dialogue / line:*\n\n"
+            "Send your Hindi or Hinglish poetry in this chat, and the bot will instantly render a new preview with `@night_thought_12` badge on this photo!"
         )
         if query.message:
             await query.message.reply_text(msg, parse_mode="Markdown")
@@ -1203,14 +1277,16 @@ async def handle_auto_callbacks(update: Update, context: ContextTypes.DEFAULT_TY
         return
 
     elif data == "studio_render":
-        cat_id = context.user_data.get("chosen_cat", "news_banner")
+        from bot.services.ai_text_engine import generate_viral_text
+        cat_id = context.user_data.get("chosen_cat", "sexy")
+        cat_info = get_category_info(cat_id)
         img_p_str = context.user_data.get("studio_img_path")
-        hook_text = context.user_data.get("studio_text", "22 FRIENDS STUDIED TOGETHER, *21 CRACKED* THE EXAM 🥹🎓")
+        hook_text = context.user_data.get("studio_text") or generate_viral_text(style=cat_id)
         img_p = Path(img_p_str) if (img_p_str and Path(img_p_str).exists()) else get_random_category_image(cat_id, chat_id)
 
         try:
             await query.edit_message_caption(
-                caption=f"⚡ *AryaFeed Reel Rendering Started...*\n\n• Style: *{cat_id.replace('_', ' ').title()}*\n• Media: `{img_p.name}`\n\n_Generating 1080x1920 HD vertical news reel..._",
+                caption=f"🌙 *Night Thought Reel Rendering Started...*\n\n• Style: *{cat_info['title']}*\n• Media: `{img_p.name}`\n\n_Generating 1080x1920 HD vertical reel with Bollywood vocal track..._",
                 parse_mode="Markdown",
             )
         except Exception:
@@ -1223,7 +1299,7 @@ async def handle_auto_callbacks(update: Update, context: ContextTypes.DEFAULT_TY
     # Shuffle Images for Current Category
     # -------------------------------------------------------------
     elif data == "shuffle_imgs":
-        cat_id = context.user_data.get("chosen_cat", "news_banner")
+        cat_id = context.user_data.get("chosen_cat", "sexy")
         cat_info = get_category_info(cat_id)
         fresh_images = await get_fresh_image_options(chat_id, category=cat_id, limit=5)
         context.user_data["current_img_options"] = fresh_images
@@ -1249,14 +1325,14 @@ async def handle_auto_callbacks(update: Update, context: ContextTypes.DEFAULT_TY
             await query.delete_message()
         except Exception:
             pass
-        await send_interactive_studio_preview(update, context, cat_id="news_banner", force_new_img=True)
+        await send_interactive_studio_preview(update, context, cat_id="sexy", force_new_img=True)
         return
 
     # -------------------------------------------------------------
     # Upload Own Image Instruction
     # -------------------------------------------------------------
     elif data == "upload_own_img":
-        cat_id = context.user_data.get("chosen_cat", "news_banner")
+        cat_id = context.user_data.get("chosen_cat", "sexy")
         cat_info = get_category_info(cat_id)
         msg = (
             f"📸 *Send Your Custom Image Now:*\n\n"
@@ -1273,7 +1349,7 @@ async def handle_auto_callbacks(update: Update, context: ContextTypes.DEFAULT_TY
     # Dynamic AI Photo Generation Button
     # -------------------------------------------------------------
     elif data == "gen_ai_photo":
-        cat_id = context.user_data.get("chosen_cat", "news_banner")
+        cat_id = context.user_data.get("chosen_cat", "sexy")
         cat_info = get_category_info(cat_id)
         await query.edit_message_text(
             f"✨ *Generating a brand new AI candid photo for {cat_info['title']}...*\n"
@@ -1312,7 +1388,7 @@ async def handle_auto_callbacks(update: Update, context: ContextTypes.DEFAULT_TY
     # Fetch Pinterest Photo Button
     # -------------------------------------------------------------
     elif data == "fetch_pin_photo":
-        cat_id = context.user_data.get("chosen_cat", "news_banner")
+        cat_id = context.user_data.get("chosen_cat", "sexy")
         cat_info = get_category_info(cat_id)
         await query.edit_message_text(
             f"📌 *Fetching fresh vertical candid photo from Pinterest CDN...*\n"
@@ -1352,7 +1428,7 @@ async def handle_auto_callbacks(update: Update, context: ContextTypes.DEFAULT_TY
     # -------------------------------------------------------------
     elif data == "reset_my_history":
         await db_manager.clear_used_assets(chat_id, "image")
-        cat_id = context.user_data.get("chosen_cat", "news_banner")
+        cat_id = context.user_data.get("chosen_cat", "sexy")
         cat_info = get_category_info(cat_id)
         fresh_images = await get_fresh_image_options(chat_id, category=cat_id, limit=5)
         context.user_data["current_img_options"] = fresh_images
@@ -1381,7 +1457,7 @@ async def handle_auto_callbacks(update: Update, context: ContextTypes.DEFAULT_TY
             chosen_opt = get_image_option(raw_img)
         context.user_data["chosen_img"] = chosen_opt["id"]
 
-        cat_id = context.user_data.get("chosen_cat", "news_banner")
+        cat_id = context.user_data.get("chosen_cat", "sexy")
         cat_info = get_category_info(cat_id)
 
         # Fetch 5 fresh viral quotes matching this category
@@ -1408,7 +1484,7 @@ async def handle_auto_callbacks(update: Update, context: ContextTypes.DEFAULT_TY
     # Shuffle Hooks for Current Category
     # -------------------------------------------------------------
     elif data == "shuffle_hooks":
-        cat_id = context.user_data.get("chosen_cat", "news_banner")
+        cat_id = context.user_data.get("chosen_cat", "sexy")
         cat_info = get_category_info(cat_id)
         img_id = context.user_data.get("chosen_img", "news_breaking_1")
         img_opt = get_image_option(img_id)
@@ -1436,7 +1512,7 @@ async def handle_auto_callbacks(update: Update, context: ContextTypes.DEFAULT_TY
     # Back to Visuals
     # -------------------------------------------------------------
     elif data == "back_to_imgs":
-        cat_id = context.user_data.get("chosen_cat", "news_banner")
+        cat_id = context.user_data.get("chosen_cat", "sexy")
         cat_info = get_category_info(cat_id)
         fresh_images = await get_fresh_image_options(chat_id, category=cat_id, limit=5)
         context.user_data["current_img_options"] = fresh_images
@@ -1458,7 +1534,7 @@ async def handle_auto_callbacks(update: Update, context: ContextTypes.DEFAULT_TY
     # -------------------------------------------------------------
     elif data.startswith("pick_hook_"):
         raw_hook = data.replace("pick_hook_", "")
-        cat_id = context.user_data.get("chosen_cat", "news_banner")
+        cat_id = context.user_data.get("chosen_cat", "sexy")
         img_id = context.user_data.get("chosen_img", "news_breaking_1")
 
         if raw_hook == "custom":
@@ -1499,7 +1575,7 @@ async def handle_auto_callbacks(update: Update, context: ContextTypes.DEFAULT_TY
     # Shuffle Songs on Preview Screen
     # -------------------------------------------------------------
     elif data == "shuffle_songs":
-        cat_id = context.user_data.get("chosen_cat", "news_banner")
+        cat_id = context.user_data.get("chosen_cat", "sexy")
         fresh_songs = await get_fresh_song_options(chat_id, category=cat_id, limit=5)
         context.user_data["current_song_options"] = fresh_songs
         await query.edit_message_reply_markup(
@@ -1510,7 +1586,7 @@ async def handle_auto_callbacks(update: Update, context: ContextTypes.DEFAULT_TY
     # Back to Hooks from Preview
     # -------------------------------------------------------------
     elif data == "back_to_hooks":
-        cat_id = context.user_data.get("chosen_cat", "news_banner")
+        cat_id = context.user_data.get("chosen_cat", "sexy")
         cat_info = get_category_info(cat_id)
         img_id = context.user_data.get("chosen_img", "news_breaking_1")
         img_opt = get_image_option(img_id)
@@ -1542,7 +1618,7 @@ async def handle_auto_callbacks(update: Update, context: ContextTypes.DEFAULT_TY
             chosen_song = random.choice(current_song_opts) if current_song_opts else {"id": "pee_loon", "title": "Pee Loon"}
             raw_song = chosen_song["id"]
 
-        cat_id = context.user_data.get("chosen_cat", "news_banner")
+        cat_id = context.user_data.get("chosen_cat", "sexy")
         img_id = context.user_data.get("chosen_img", "news_breaking_1")
         hook_text = context.user_data.get("chosen_hook", "")
 

@@ -467,8 +467,8 @@ async def handle_post_to_insta_callback(update: Update, context: ContextTypes.DE
         return
 
     is_image = media_file.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp")
-    hook_text = (session.get("overlay_text") if session else None) or "⚡ Daily dose of viral stories & memes @aryafeed.in"
-    style = (session.get("selected_template") if session else None) or "news_banner"
+    hook_text = (session.get("overlay_text") if session else None) or "🌙 Raat gehri, baatein ankahi... @night_thought_12"
+    style = (session.get("selected_template") if session else None) or "sexy"
 
     if not caption and query.message and query.message.caption:
         cap_text = query.message.caption
@@ -489,9 +489,20 @@ async def handle_post_to_insta_callback(update: Update, context: ContextTypes.DE
     await query.edit_message_reply_markup(reply_markup=None)
     media_desc = "Photo" if is_image else "Reel"
     display_title = f" ({title_label})" if title_label else ""
+
+    # Determine strict account routing:
+    # Unless explicitly tagged as news, always default to @night_thought_12!
+    is_news = (
+        reel_id.startswith(("news_", "refresh_"))
+        or "aryafeed" in (caption or "").lower()
+        or any(kw in (caption or "").lower() for kw in ["#breakingnews", "#indianews", "upsc", "cji", "cjp", "protest"])
+    )
+    target_account = "arya" if is_news else "night"
+    target_handle = "@aryafeed.in" if is_news else "@night_thought_12"
+
     status_msg = await context.bot.send_message(
         chat_id=chat_id,
-        text=f"⏳ *Queued {media_desc}{display_title} for @aryafeed.in...* Checking 10-minute rate protection.",
+        text=f"⏳ *Queued {media_desc}{display_title} for {target_handle}...* Checking 10-minute rate protection.",
         parse_mode="Markdown"
     )
 
@@ -516,23 +527,10 @@ async def handle_post_to_insta_callback(update: Update, context: ContextTypes.DE
                     f"🛡️ *10-Min Rate Protection Active*\n\n"
                     f"🎬 *{title_label or media_file.name}*\n"
                     f"⏱️ Last upload was `{int(elapsed) // 60}m {int(elapsed) % 60}s` ago.\n"
-                    f"🚀 Auto-publishing to `@aryafeed.in` in *{mins_left}m {secs_left}s*...",
+                    f"🚀 Auto-publishing to `{target_handle}` in *{mins_left}m {secs_left}s*...",
                     parse_mode="Markdown",
                 )
                 await asyncio.sleep(wait_sec)
-
-        # Determine strict account routing:
-        # News reels -> @aryafeed.in (target_account="arya")
-        # Meme / hot sexy / aesthetic reels -> @night_thought_12 (target_account="night")
-        is_news = (
-            reel_id.startswith(("news_", "reel_", "refresh_"))
-            or "aryafeed" in (caption or "").lower()
-            or "news" in media_file.name.lower()
-            or "[per " in (caption or "").lower()
-            or any(kw in (caption or "").lower() for kw in ["#breakingnews", "#indianews", "upsc", "cji", "cjp", "protest"])
-        )
-        target_account = "arya" if is_news else "night"
-        target_handle = "@aryafeed.in" if is_news else "@night_thought_12"
 
         await status_msg.edit_text(
             f"🚀 *Uploading {media_desc}{display_title} to Instagram ({target_handle})...* Please wait.",
