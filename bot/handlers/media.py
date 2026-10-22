@@ -26,20 +26,61 @@ DEFAULT_CAPTION = (
 
 @restricted
 async def reel_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle /reel command: directly launch the Night Thought Studio Preview."""
+    """Handle /reel command: immediately renders & sends the complete animated video reel with Bollywood vocals & motion!"""
     chat_id = update.effective_chat.id
-    await db_manager.start_reel_session(chat_id)
+    status_msg = await update.effective_message.reply_text(
+        "🎬 *Creating Night Thought Animated Reel...*\n\n"
+        "• 📸 Selecting aesthetic late-night candid visual...\n"
+        "• ✍️ Synthesizing viral late-night shayari...\n"
+        "• 🎵 Adding Bollywood vocal soundtrack...\n"
+        "• 🎞️ Applying smooth Ken Burns zoom motion...\n\n"
+        "_Rendering 1080x1920 HD video reel, please wait ~15s..._ ⏳",
+        parse_mode="Markdown"
+    )
 
-    from bot.handlers.auto import send_interactive_studio_preview
+    import random
+    from bot.handlers.auto import get_random_category_image, get_category_info, execute_studio_reel_render, ALL_HOOK_OPTIONS
+    from bot.services.ai_text_engine import generate_viral_text
 
     cat_id = "sexy"
+    if context.args:
+        arg = context.args[0].lower().strip()
+        if arg in ("broken", "dard", "sad"):
+            cat_id = "broken"
+        elif arg in ("romantic", "love"):
+            cat_id = "romantic"
+        elif arg in ("traditional", "saree"):
+            cat_id = "traditional"
+        elif arg in ("baddie", "attitude"):
+            cat_id = "baddie"
+
+    image_path = get_random_category_image(cat_id, chat_id)
+    cat_hooks = [h["text"] for h in ALL_HOOK_OPTIONS if cat_id in h.get("categories", [])]
+    if cat_hooks:
+        hook_text = random.choice(cat_hooks)
+    else:
+        hook_text = generate_viral_text(style=cat_id)
+
     context.user_data["chosen_cat"] = cat_id
-    await send_interactive_studio_preview(
-        update,
-        context,
-        cat_id=cat_id,
-        force_new_img=True,
-    )
+    context.user_data["studio_img_path"] = str(image_path)
+    context.user_data["studio_text"] = hook_text
+
+    try:
+        await execute_studio_reel_render(
+            update,
+            context,
+            chat_id=chat_id,
+            image_path=image_path,
+            hook_text=hook_text,
+            cat_id=cat_id
+        )
+        try:
+            await status_msg.delete()
+        except Exception:
+            pass
+    except Exception as e:
+        logger.exception(f"Direct /reel render failed: {e}")
+        await status_msg.edit_text(f"❌ Reel rendering error: {e}\nPlease try again with /auto.")
 
 
 @restricted

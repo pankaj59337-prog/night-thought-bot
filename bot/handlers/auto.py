@@ -932,7 +932,7 @@ def build_studio_preview_keyboard() -> InlineKeyboardMarkup:
     """Action buttons attached to the live 1080x1920 Night Thought preview image."""
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("🎬 Render Night Thought Reel", callback_data="studio_render")
+            InlineKeyboardButton("🎬 Create Animated Video Reel (Song + Motion) 🚀", callback_data="studio_render")
         ],
         [
             InlineKeyboardButton("⏭️ Next Photo", callback_data="studio_skip"),
@@ -1000,14 +1000,16 @@ async def send_interactive_studio_preview(
     )
 
     caption = (
-        f"🌙 *Night Thought Studio Preview (1080x1920)*\n\n"
+        f"📸 *Night Thought Studio: Live Preview (Still Image)*\n\n"
         f"• 📂 *Category:* {cat_info['icon']} *{cat_info['title']}*\n"
-        f"• 🖼️ *Image:* `{image_path.name}`\n"
+        f"• 🖼️ *Visual:* `{image_path.name}`\n"
         f"• ✍️ *Text:* \"_{chosen_text}_\"\n\n"
-        f"👉 Tap **🎬 Render Night Thought Reel** to finalize video.\n"
-        f"👉 Tap **⏭️ Next Photo** to preview next image.\n"
-        f"👉 Tap **🔄 New Shayari / Line** for fresh poetry.\n"
-        f"👉 Tap **✏️ Custom Text** to enter your own lines."
+        f"⚠️ *Ye photo sirf PREVIEW hai!*\n"
+        f"Animated video reel (with Bollywood vocals + Ken Burns zoom motion) render karne ke liye **neeche button dabayein** 👇\n\n"
+        f"👉 **🎬 Create Animated Video Reel** — Video reel render karein\n"
+        f"👉 **⏭️ Next Photo** — Doosri photo preview karein\n"
+        f"👉 **🔄 New Shayari / Line** — Doosri shayari layein\n"
+        f"👉 **✏️ Custom Text** — Apni pasand ki line likhein"
     )
 
     with open(preview_path, "rb") as photo_f:
