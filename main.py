@@ -405,48 +405,12 @@ async def setup_bot() -> Application:
     # Register Global Error Handler
     app.add_error_handler(global_error_handler)
 
-    async def periodic_news_monitor_job(context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Autonomous news scout: checks for breaking stories, renders and delivers/posts."""
-        if os.environ.get("AUTO_NEWS_REELS", "false").lower() not in ("true", "1", "yes"):
-            return
-        from bot.services.live_news_service import live_news_service
-        try:
-            target_chat = config.admin_telegram_id or 5381201341
-            # AUTO_NEWS_REELS=true means full autonomy — always post
-            should_post = True
-            logger.info(f"[PeriodicNews] Scanning breaking news for chat {target_chat} (Auto-Post: {should_post})...")
-            await live_news_service.create_and_publish_news_reel(
-                chat_id=target_chat,
-                auto_post=should_post,
-                bot=context.bot,
-            )
-        except Exception as e:
-            logger.warning(f"[PeriodicNews] Autonomous news check error: {e}")
-
-    async def periodic_competitor_monitor_job(context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Autonomous scout: checks 4 competitor accounts for fresh clean/branded media."""
-        from bot.services.competitor_monitor import competitor_monitor_service
-        try:
-            target_chat = config.admin_telegram_id or 5381201341
-            logger.info(f"[PeriodicCompetitor] Scanning 4 competitor accounts for chat {target_chat}...")
-            await competitor_monitor_service.scan_and_rebrand_competitors(
-                chat_id=target_chat,
-                bot=context.bot,
-            )
-        except Exception as e:
-            logger.warning(f"[PeriodicCompetitor] Autonomous competitor check error: {e}")
-
-    # Register Periodic Cleanup Job, Keep-Alive Job & Daily AutoPilot Schedulers
+    # Register Periodic Cleanup Job & Daily AutoPilot Schedulers (Strictly Night Thought)
     if app.job_queue:
         app.job_queue.run_repeating(periodic_cleanup_job, interval=3600, first=60)
         logger.info("Scheduled retention cleanup job (interval: 1 hour)")
-        app.job_queue.run_repeating(render_keep_alive_job, interval=180, first=30)
-        logger.info("Registered 24/7 Keep-Alive ping job (interval: 3 mins)")
-        app.job_queue.run_repeating(periodic_news_monitor_job, interval=3600, first=60)
-        logger.info("Registered Autonomous Breaking News monitor job (interval: 1 hour)")
-        app.job_queue.run_repeating(periodic_competitor_monitor_job, interval=1800, first=90)
-        logger.info("Registered Autonomous Competitor Scout monitor job (interval: 30 mins)")
         register_autopilot_jobs(app)
+        logger.info("Registered Night Thought Daily AutoPilot Schedulers (01:20 PM & 09:20 PM IST)")
 
     return app
 
@@ -471,13 +435,7 @@ async def main_async() -> None:
 
     logger.info("🚀 Night Thought Reel Bot is running and polling for updates...")
 
-    # Launch 24/7 Real-Time Spy Sentinel Daemon on 4 Competitor Feeds
-    from bot.services.competitor_monitor import competitor_monitor_service
-    target_chat = config.admin_telegram_id or 5381201341
-    asyncio.create_task(
-        competitor_monitor_service.run_realtime_spy_sentinel(chat_id=target_chat, bot=app.bot)
-    )
-    logger.info("🚨 [SpySentinel] 24/7 Real-Time Competitor Spy Daemon launched!")
+    # SpySentinel permanently disabled for Night Thought account
 
     # 24/7 Polling Supervisor: keep container alive and restart updater if interrupted
     try:
