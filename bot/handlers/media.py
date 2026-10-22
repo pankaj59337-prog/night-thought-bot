@@ -1,6 +1,5 @@
-"""Media upload handler: accepts direct user photo/video uploads,
-applies @night_thought_12 brand watermark, generates aesthetic late-night caption,
-and provides 1-tap Instagram post or animated reel conversion.
+"""Media ingestion handlers: photos, videos, animations.
+Auto-stamps @night_thought_12 watermark on bottom-right and provides 1-tap Instagram posting!
 """
 
 import asyncio
@@ -10,7 +9,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
 from bot.handlers.commands import restricted
-from bot.services.media_watermark import stamp_image_watermark, stamp_video_watermark
+from bot.services.video_engine import stamp_image_watermark, stamp_video_watermark
 from bot.utils.config import config
 from database.db import db_manager
 
@@ -23,6 +22,24 @@ DEFAULT_CAPTION = (
     "📩 DM for credits / reposts\n\n"
     "#nightthought #shayari #hindishayari #poetry #reels #explore #viral #trending"
 )
+
+
+@restricted
+async def reel_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /reel command: directly launch the Night Thought Studio Preview."""
+    chat_id = update.effective_chat.id
+    await db_manager.start_reel_session(chat_id)
+
+    from bot.handlers.auto import send_interactive_studio_preview
+
+    cat_id = "sexy"
+    context.user_data["chosen_cat"] = cat_id
+    await send_interactive_studio_preview(
+        update,
+        context,
+        cat_id=cat_id,
+        force_new_img=True,
+    )
 
 
 @restricted
