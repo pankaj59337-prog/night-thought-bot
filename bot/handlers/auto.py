@@ -902,15 +902,12 @@ async def complete_custom_reel_flow(update: Update, context: ContextTypes.DEFAUL
 
 def get_random_category_image(cat_id: str, chat_id: int, used_names_override: Optional[set] = None) -> Path:
     """Pick a random unused image for the requested category, strictly respecting category routing."""
-    cat_clean = (cat_id or "news").lower().strip()
+    cat_clean = (cat_id or "sexy").lower().strip()
     cat_dir = Path(f"assets/images/categories/{cat_clean}")
 
     # Fallback paths if specific subfolder does not exist
     if not cat_dir.exists():
-        if cat_clean in ("sexy", "baddie", "romantic", "broken", "cinematic", "traditional", "aesthetic", "meme"):
-            cat_dir = Path("assets/images/categories/sexy")
-        else:
-            cat_dir = Path("assets/images/categories/news")
+        cat_dir = Path("assets/images/categories/sexy")
 
     used_dir = Path("assets/images/used")
     used_names = set(used_names_override) if used_names_override else set()
@@ -925,7 +922,7 @@ def get_random_category_image(cat_id: str, chat_id: int, used_names_override: Op
         available = files
 
     if not available:
-        fallback = Path("assets/images/categories/sexy/1.jpg") if cat_clean in ("sexy", "baddie", "romantic", "broken", "cinematic", "traditional", "aesthetic", "meme") else Path("assets/images/categories/news/10.jpg")
+        fallback = Path("assets/images/categories/sexy/170.jpg")
         return fallback
 
     return random.choice(available)
